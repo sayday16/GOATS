@@ -1,0 +1,5 @@
+{
+  "appHost": {
+    "path": "GoatStore.API.AppHost/GoatStore.API.AppHost.csproj"
+  }
+}
