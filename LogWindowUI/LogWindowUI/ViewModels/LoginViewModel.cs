@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
@@ -112,7 +112,12 @@ namespace LogWindowUI.ViewModels
 
         private void ExecuteGoToRegister(object? parameter)
         {
-            var registerWindow = new Views.RegisterView();
+            IAuthService authService = App.CreateAuthService();
+            var registerViewModel = new RegisterViewModel(authService);
+            var registerWindow = new Views.RegisterView
+            {
+                DataContext = registerViewModel
+            };
             registerWindow.Show();
             CloseCurrentWindow();
         }
