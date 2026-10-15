@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="GoatStore.API/GoatStore.API.AppHost/GoatStore.API.AppHost.csproj" Id="bff09ab1-309a-4910-bab9-2360b6f75588" />
   <Project Path="GoatStore.API/GoatStore.API.Server/GoatStore.API.Server.csproj" />
+  <Project Path="GoatStore.Core/GoatStore.Core.csproj" />
   <Project Path="GoatStore.DataAccess/GoatStore.DataAccess.csproj" />
 </Solution>

@@ -1,6 +1,49 @@
-@Server_HostAddress = http://localhost:5585
-
-GET {{Server_HostAddress}}/api/weatherforecast/
-Accept: application/json
+@HostAddress = http://localhost:5585
 
 ###
+POST {{HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "cashier@gmail.com",
+  "password": "password123",
+  "confirmPassword": "password123",
+  "role": 1,
+  "storeName": "NonExistentStore",
+  "storePassword": "anyPassword"
+}
+
+### 
+POST {{HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "owner@gmail.com",
+  "password": "password123",
+  "confirmPassword": "password123",
+  "role": 0,
+  "storeName": "GoatShop Lviv",
+  "storePassword": "secretStorePass"
+}
+
+### 
+POST {{HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "cashier@gmail.com",
+  "password": "password123",
+  "confirmPassword": "password123",
+  "role": 1,
+  "storeName": "GoatShop Lviv",
+  "storePassword": "secretStorePass"
+}
+
+### 
+POST {{HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "owner@gmail.com",
+  "password": "password123"
+}

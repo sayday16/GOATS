@@ -1,48 +1,67 @@
+using System.Threading.RateLimiting;
+using GoatStore.Core.DTOs;
+using GoatStore.Core.Interfaces;
+using GoatStore.Core.Services;
 using GoatStore.DataAccess;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
 
-// Add services to the container.
 builder.Services.AddProblemDetails();
 
-// === ДОДАНО: Реєстрація DbContext через Dependency Injection ===
 builder.Services.AddDbContext<GoatStoreDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-// ===============================================================
+
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new AuthResponseDto { IsSuccess = false, Message = "Забагато спроб. Спробуйте ще раз за хвилину." },
+            cancellationToken);
+    };
+
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = builder.Environment.IsDevelopment() ? 100 : 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 app.UseExceptionHandler();
+app.UseRateLimiter();
 
-string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
+var authGroup = app.MapGroup("/api/auth").RequireRateLimiting("auth");
 
-var api = app.MapGroup("/api");
-api.MapGet("weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+authGroup.MapPost("/register", async (RegisterRequestDto request, IAuthService authService, CancellationToken cancellationToken) =>
+    ToHttpResult(await authService.RegisterAsync(request, cancellationToken)));
+
+authGroup.MapPost("/login", async (LoginRequestDto request, IAuthService authService, CancellationToken cancellationToken) =>
+    ToHttpResult(await authService.LoginAsync(request, cancellationToken)));
 
 app.MapDefaultEndpoints();
-
 app.UseFileServer();
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+static IResult ToHttpResult(AuthResponseDto result) => result.Error switch
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+    AuthError.None => Results.Ok(result),
+    AuthError.Validation => Results.BadRequest(result),
+    AuthError.Unauthorized => Results.Json(result, statusCode: StatusCodes.Status401Unauthorized),
+    AuthError.Forbidden => Results.Json(result, statusCode: StatusCodes.Status403Forbidden),
+    AuthError.Conflict => Results.Conflict(result),
+    _ => Results.Json(result, statusCode: StatusCodes.Status500InternalServerError)
+};
