@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace GoatStore.DataAccess.Migrations
 {
     /// <inheritdoc />
-    public partial class AddStoresTable : Migration
+    public partial class AddStores : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -30,7 +30,8 @@ namespace GoatStore.DataAccess.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    NormalizedName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     StorePasswordHash = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
@@ -48,13 +49,19 @@ namespace GoatStore.DataAccess.Migrations
                 table: "Products",
                 column: "StoreId");
 
+            migrationBuilder.CreateIndex(
+                name: "IX_Stores_NormalizedName",
+                table: "Stores",
+                column: "NormalizedName",
+                unique: true);
+
             migrationBuilder.AddForeignKey(
                 name: "FK_Products_Stores_StoreId",
                 table: "Products",
                 column: "StoreId",
                 principalTable: "Stores",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Restrict);
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Users_Stores_StoreId",
@@ -62,7 +69,7 @@ namespace GoatStore.DataAccess.Migrations
                 column: "StoreId",
                 principalTable: "Stores",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Restrict);
         }
 
         /// <inheritdoc />

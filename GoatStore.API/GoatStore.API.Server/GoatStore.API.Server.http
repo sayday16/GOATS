@@ -38,3 +38,12 @@ Content-Type: application/json
   "storeName": "GoatShop Lviv",
   "storePassword": "secretStorePass"
 }
+
+### 
+POST {{HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "owner@gmail.com",
+  "password": "password123"
+}

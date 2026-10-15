@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GoatStore.DataAccess.Migrations
 {
     [DbContext(typeof(GoatStoreDbContext))]
-    [Migration("20261015091227_AddStoresTable")]
-    partial class AddStoresTable
+    [Migration("20261015104116_AddStores")]
+    partial class AddStores
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -66,13 +66,22 @@ namespace GoatStore.DataAccess.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("StorePasswordHash")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique();
 
                     b.ToTable("Stores");
                 });
@@ -113,7 +122,7 @@ namespace GoatStore.DataAccess.Migrations
                     b.HasOne("GoatStore.DataAccess.Entities.Store", "Store")
                         .WithMany("Products")
                         .HasForeignKey("StoreId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Store");
@@ -124,7 +133,7 @@ namespace GoatStore.DataAccess.Migrations
                     b.HasOne("GoatStore.DataAccess.Entities.Store", "Store")
                         .WithMany("Users")
                         .HasForeignKey("StoreId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Store");
