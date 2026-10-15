@@ -90,7 +90,7 @@ namespace LogWindowUI.ViewModels
 
                 if (response.IsSuccess)
                 {
-                    var mainWindow = new MainWindow();
+                    var mainWindow = new MainWindow(response);
                     mainWindow.Show();
                     CloseCurrentWindow();
                 }
