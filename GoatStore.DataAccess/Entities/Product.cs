@@ -16,5 +16,7 @@ namespace GoatStore.DataAccess.Entities
         public decimal SalePrice { get; set; }
         public ProductStatus Status { get; set; } = ProductStatus.InStock;
         public DateTime? SoldDate { get; set; }
+        public Guid StoreId { get; set; }
+        public Store? Store { get; set; }
     }
 }

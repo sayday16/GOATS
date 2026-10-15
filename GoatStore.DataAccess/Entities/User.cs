@@ -14,5 +14,7 @@ namespace GoatStore.DataAccess.Entities
         public string Email { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
         public UserRole Role { get; set; }
+        public Guid StoreId { get; set; }
+        public Store? Store { get; set; }
     }
 }

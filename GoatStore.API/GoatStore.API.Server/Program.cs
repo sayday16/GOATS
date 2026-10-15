@@ -1,48 +1,40 @@
+using GoatStore.Core.DTOs;
+using GoatStore.Core.Interfaces;
+using GoatStore.Core.Services;
 using GoatStore.DataAccess;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
 
-// Add services to the container.
 builder.Services.AddProblemDetails();
 
-// === ДОДАНО: Реєстрація DbContext через Dependency Injection ===
 builder.Services.AddDbContext<GoatStoreDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-// ===============================================================
+
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 app.UseExceptionHandler();
 
-string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
+var authGroup = app.MapGroup("/api/auth");
 
-var api = app.MapGroup("/api");
-api.MapGet("weatherforecast", () =>
+authGroup.MapPost("/register", async (RegisterRequestDto request, IAuthService authService) =>
 {
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    var result = await authService.RegisterAsync(request);
+    return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+});
+
+authGroup.MapPost("/login", async (LoginRequestDto request, IAuthService authService) =>
+{
+    var result = await authService.LoginAsync(request);
+    return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+});
+
 
 app.MapDefaultEndpoints();
-
 app.UseFileServer();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
