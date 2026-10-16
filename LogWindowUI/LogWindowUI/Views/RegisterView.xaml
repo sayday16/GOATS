@@ -1,10 +1,120 @@
-﻿<Window x:Class="LogWindowUI.Views.RegisterView"
+<Window x:Class="LogWindowUI.Views.RegisterView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Goat Store Manager - Register" Height="900" Width="1440"
+        MinWidth="520" MinHeight="600"
         Background="{StaticResource BgColor}"
         WindowStartupLocation="CenterScreen">
-    <Grid>
-        <TextBlock Text="Тут буде вікно реєстрації" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource PrimaryDarkBlue}"/>
-    </Grid>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+        <Grid MinHeight="{Binding RelativeSource={RelativeSource AncestorType=ScrollViewer}, Path=ActualHeight}">
+            <Border Width="480" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24" Background="{StaticResource CardColor}" CornerRadius="12">
+                <Border.Effect>
+                    <DropShadowEffect Color="#000000" Opacity="0.06" BlurRadius="30" ShadowDepth="10" Direction="270"/>
+                </Border.Effect>
+
+                <StackPanel Margin="48,40,48,40">
+                    <StackPanel HorizontalAlignment="Center" Margin="0,0,0,16">
+                        <Border Width="56" Height="56" Background="{StaticResource PrimaryDarkBlue}" CornerRadius="12" Margin="0,0,0,16">
+                            <Path Data="M14.5427 20.7917V15.5833C14.5427 15.3071 14.4329 15.0421 14.2376 14.8468C14.0422 14.6514 13.7773 14.5417 13.501 14.5417H9.33435C9.05808 14.5417 8.79313 14.6514 8.59778 14.8468C8.40243 15.0421 8.29268 15.3071 8.29268 15.5833V20.7917M17.4322 9.65625C17.2151 9.44837 16.9261 9.33234 16.6254 9.33234C16.3248 9.33234 16.0358 9.44837 15.8187 9.65625C15.3343 10.1182 14.6906 10.376 14.0213 10.376C13.3519 10.376 12.7083 10.1182 12.2239 9.65625C12.0068 9.44868 11.718 9.33284 11.4176 9.33284C11.1173 9.33284 10.8285 9.44868 10.6114 9.65625C10.127 10.1186 9.48308 10.3765 8.81347 10.3765C8.14385 10.3765 7.49997 10.1186 7.01555 9.65625C6.7984 9.44837 6.50939 9.33234 6.20878 9.33234C5.90817 9.33234 5.61916 9.44837 5.40201 9.65625C4.93414 10.1027 4.31688 10.3591 3.67037 10.3756C3.02386 10.392 2.39437 10.1673 1.90441 9.74519C1.41445 9.32307 1.09909 8.73375 1.0197 8.09192C0.940315 7.4501 1.10258 6.80169 1.47493 6.27292L4.4843 1.91458C4.67525 1.63282 4.93232 1.40214 5.23303 1.2427C5.53374 1.08327 5.86894 0.999937 6.2093 1H16.626C16.9653 0.99987 17.2996 1.08265 17.5997 1.24113C17.8998 1.39962 18.1566 1.62902 18.3478 1.90938L21.3635 6.27604C21.7359 6.80523 21.898 7.45413 21.8181 8.09629C21.7382 8.73845 21.4221 9.32786 20.9314 9.74968C20.4406 10.1715 19.8104 10.3955 19.1635 10.378C18.5167 10.3606 17.8995 10.1029 17.4322 9.65521M3.08435 10.3231V18.7085C3.08435 19.2611 3.30384 19.791 3.69454 20.1817C4.08525 20.5724 4.61515 20.7919 5.16768 20.7919H17.6677C18.2202 20.7919 18.7501 20.5724 19.1408 20.1817C19.5315 19.791 19.751 19.2611 19.751 18.7085V10.3231"
+                                  Fill="Transparent" Stroke="White" StrokeThickness="2"
+                                  Stretch="Uniform" Width="23" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </StackPanel>
+
+                    <TextBlock Text="Реєстрація" FontSize="28" FontWeight="Medium" HorizontalAlignment="Center" Foreground="{StaticResource TextMain}" Margin="0,0,0,6"/>
+                    <TextBlock Text="Створіть новий обліковий запис" FontSize="14" HorizontalAlignment="Center" Foreground="{StaticResource TextMuted}" Margin="0,0,0,28"/>
+
+                    <TextBlock Text="Електронна пошта" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextMain}" Margin="0,0,0,8"/>
+                    <TextBox Style="{StaticResource InputStyle}" Tag="Введіть ваш Email" Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,16"/>
+
+                    <TextBlock Text="Пароль" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextMain}" Margin="0,0,0,8"/>
+                    <Grid Margin="0,0,0,16">
+                        <TextBox x:Name="VisiblePasswordBox" Style="{StaticResource InputStyle}" Tag="" Visibility="Collapsed" Padding="15,0,45,0" TextChanged="VisiblePasswordBox_TextChanged"/>
+                        <PasswordBox x:Name="HiddenPasswordBox" Style="{StaticResource PasswordInputStyle}" PasswordChanged="HiddenPasswordBox_PasswordChanged"/>
+                        <TextBlock x:Name="PasswordPlaceholder" Text="Введіть пароль" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" Margin="16,0,0,0" IsHitTestVisible="False"/>
+                        <Button x:Name="TogglePasswordButton" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,15,0" Background="Transparent" BorderThickness="0" Cursor="Hand" Click="TogglePasswordButton_Click">
+                            <Grid>
+                                <Path x:Name="IconEyeOpen" Data="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 12,15A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"
+                                      Fill="{StaticResource TextMuted}" Stretch="Uniform" Width="20" Height="20" Visibility="Visible"/>
+                                <Path x:Name="IconEyeClosed" Data="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"
+                                      Fill="{StaticResource TextMuted}" Stretch="Uniform" Width="20" Height="20" Visibility="Collapsed"/>
+                            </Grid>
+                        </Button>
+                    </Grid>
+
+                    <TextBlock Text="Підтвердження пароля" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextMain}" Margin="0,0,0,8"/>
+                    <Grid Margin="0,0,0,20">
+                        <TextBox x:Name="VisibleConfirmPasswordBox" Style="{StaticResource InputStyle}" Tag="" Visibility="Collapsed" Padding="15,0,45,0" TextChanged="VisibleConfirmPasswordBox_TextChanged"/>
+                        <PasswordBox x:Name="HiddenConfirmPasswordBox" Style="{StaticResource PasswordInputStyle}" PasswordChanged="HiddenConfirmPasswordBox_PasswordChanged"/>
+                        <TextBlock x:Name="ConfirmPasswordPlaceholder" Text="Повторіть пароль" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" Margin="16,0,0,0" IsHitTestVisible="False"/>
+                        <Button x:Name="ToggleConfirmPasswordButton" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,15,0" Background="Transparent" BorderThickness="0" Cursor="Hand" Click="ToggleConfirmPasswordButton_Click">
+                            <Grid>
+                                <Path x:Name="IconConfirmEyeOpen" Data="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 12,7A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"
+                                      Fill="{StaticResource TextMuted}" Stretch="Uniform" Width="20" Height="20" Visibility="Visible"/>
+                                <Path x:Name="IconConfirmEyeClosed" Data="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"
+                                      Fill="{StaticResource TextMuted}" Stretch="Uniform" Width="20" Height="20" Visibility="Collapsed"/>
+                            </Grid>
+                        </Button>
+                    </Grid>
+
+                    <TextBlock Text="Оберіть роль:" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextMain}" Margin="0,0,0,10"/>
+                    <StackPanel Margin="0,0,0,20">
+                        <RadioButton Content="  Власник / Адміністратор (створити магазин)" IsChecked="{Binding IsAdmin}" Foreground="{StaticResource TextMain}" FontSize="13" Margin="0,0,0,8" Cursor="Hand"/>
+                        <RadioButton Content="  Продавець-консультант (приєднатися до магазину)" IsChecked="{Binding IsSeller}" Foreground="{StaticResource TextMain}" FontSize="13" Cursor="Hand"/>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding StoreNameLabel}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextMain}" Margin="0,0,0,8"/>
+                    <TextBox Style="{StaticResource InputStyle}" Tag="{Binding StoreNamePlaceholder}" Text="{Binding StoreName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,16"/>
+
+                    <TextBlock Text="Секретний код магазину" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextMain}" Margin="0,0,0,8"/>
+                    <Grid Margin="0,0,0,20">
+                        <TextBox x:Name="VisibleStorePasswordBox" Style="{StaticResource InputStyle}" Tag="" Visibility="Collapsed" Padding="15,0,45,0" TextChanged="VisibleStorePasswordBox_TextChanged"/>
+                        <PasswordBox x:Name="HiddenStorePasswordBox" Style="{StaticResource PasswordInputStyle}" PasswordChanged="HiddenStorePasswordBox_PasswordChanged"/>
+                        <TextBlock x:Name="StorePasswordPlaceholder" Text="{Binding StorePasswordPlaceholder}" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" Margin="16,0,0,0" IsHitTestVisible="False"/>
+                        <Button x:Name="ToggleStorePasswordButton" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,15,0" Background="Transparent" BorderThickness="0" Cursor="Hand" Click="ToggleStorePasswordButton_Click">
+                            <Grid>
+                                <Path x:Name="IconStoreEyeOpen" Data="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 12,7A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"
+                                      Fill="{StaticResource TextMuted}" Stretch="Uniform" Width="20" Height="20" Visibility="Visible"/>
+                                <Path x:Name="IconStoreEyeClosed" Data="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"
+                                      Fill="{StaticResource TextMuted}" Stretch="Uniform" Width="20" Height="20" Visibility="Collapsed"/>
+                            </Grid>
+                        </Button>
+                    </Grid>
+
+                    <TextBlock Text="{Binding ErrorMessage}"
+                               Foreground="#D92D20"
+                               FontSize="13"
+                               FontWeight="Medium"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,8"
+                               Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                    <TextBlock Text="{Binding SuccessMessage}"
+                               Foreground="#039855"
+                               FontSize="13"
+                               FontWeight="Medium"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,8"
+                               Visibility="{Binding HasSuccess, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                    <Button Content="Зареєструватися" Style="{StaticResource MainButton}" Command="{Binding RegisterCommand}" Margin="0,0,0,24"/>
+
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock FontSize="13" HorizontalAlignment="Center">
+                            <Run Text="Вже є обліковий запис? " Foreground="{StaticResource TextMuted}"/>
+                            <Run Text="Увійти" FontWeight="Bold" Foreground="{StaticResource PrimaryDarkBlue}"/>
+                            <TextBlock.InputBindings>
+                                <MouseBinding Gesture="LeftClick" Command="{Binding GoToLoginCommand}"/>
+                            </TextBlock.InputBindings>
+                        </TextBlock>
+                    </StackPanel>
+
+                </StackPanel>
+            </Border>
+        </Grid>
+    </ScrollViewer>
 </Window>

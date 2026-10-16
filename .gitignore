@@ -37,11 +37,14 @@ obj/x64/
 bin/x86/
 obj/x86/
 
+x64/
+x86/
 [Ww][Ii][Nn]32/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
 [Aa][Rr][Mm]64[Ee][Cc]/
 bld/
+[Bb]in/
 [Oo]bj/
 [Oo]ut/
 [Ll]og/
@@ -113,8 +116,8 @@ StyleCopReport.xml
 !Directory.Build.rsp
 *.sbr
 *.tlb
-*.tli
 *.tlh
+*.tli
 *.tmp
 *.tmp_proj
 *_wpftmp.csproj
@@ -140,6 +143,11 @@ ipch/
 *.cachefile
 *.VC.db
 *.VC.VC.opendb
+
+# Local database files
+*.db
+*.db-shm
+*.db-wal
 
 # Visual Studio profiler
 *.psess
@@ -314,6 +322,8 @@ FakesAssemblies/
 # Node.js Tools for Visual Studio
 .ntvs_analysis.dat
 node_modules/
+dist/
+.npm
 
 # Visual Studio 6 build log
 *.plg
@@ -404,26 +414,4 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 **/.ionide/
 
-# Fody - auto-generated XML schema
-FodyWeavers.xsd
-
-# VS Code files for those working on multiple tools
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-!.vscode/*.code-snippets
-
-# Local History for Visual Studio Code
-.history/
-
-# Built Visual Studio Code Extensions
-*.vsix
-
-# Windows Installer files from build outputs
-*.cab
-*.msi
-*.msix
-*.msm
-*.msp
+# Fody - auto-
