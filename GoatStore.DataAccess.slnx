@@ -3,4 +3,5 @@
   <Project Path="GoatStore.API/GoatStore.API.Server/GoatStore.API.Server.csproj" />
   <Project Path="GoatStore.Core/GoatStore.Core.csproj" />
   <Project Path="GoatStore.DataAccess/GoatStore.DataAccess.csproj" />
+  <Project Path="LogWindowUI/LogWindowUI/LogWindowUI.csproj" />
 </Solution>
