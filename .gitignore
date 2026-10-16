@@ -1,0 +1,39 @@
+## User-specific files
+*.rsuser
+*.suo
+*.user
+*.userprefs
+*.sln.docstates
+
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio
+.vs/
+Generated\ Files/
+*.opendb
+*.db
+*.db-shm
+*.db-wal
+
+## JetBrains Rider / Resharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+## Node / Frontend
+node_modules/
+dist/
+.npm
