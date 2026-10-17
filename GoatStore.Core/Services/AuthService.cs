@@ -16,8 +16,6 @@ namespace GoatStore.Core.Services
 
         private static readonly EmailAddressAttribute EmailValidator = new();
 
-        // Хеш-заглушка для логіну: перевіряємо її, коли користувача не знайдено,
-        // щоб за часом відповіді не можна було дізнатися, чи існує такий Email.
         private static readonly string DummyPasswordHash =
             BCrypt.Net.BCrypt.HashPassword("dummy-password-for-timing");
 
@@ -27,6 +25,8 @@ namespace GoatStore.Core.Services
         {
             _context = context;
         }
+
+        public void Dispose() => _context.Dispose();
 
         public async Task<AuthResponseDto> RegisterAsync(
             RegisterRequestDto request, CancellationToken cancellationToken = default)

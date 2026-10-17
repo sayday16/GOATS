@@ -93,6 +93,7 @@ namespace LogWindowUI.ViewModels
                     var mainWindow = new MainWindow(response);
                     mainWindow.Show();
                     CloseCurrentWindow();
+                    _authService.Dispose();
                 }
                 else
                 {
@@ -101,7 +102,7 @@ namespace LogWindowUI.ViewModels
             }
             catch (Exception ex)
             {
-                ErrorMessage = $"Помилка з'єднання з базою даних: {ex.Message}";
+                ErrorMessage = $"Не вдалося зв'язатися із сервером: {ex.Message}";
             }
             finally
             {
@@ -120,6 +121,7 @@ namespace LogWindowUI.ViewModels
             };
             registerWindow.Show();
             CloseCurrentWindow();
+            _authService.Dispose();
         }
 
         private void CloseCurrentWindow()
