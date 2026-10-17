@@ -54,6 +54,17 @@ authGroup.MapPost("/login", async (LoginRequestDto request, IAuthService authSer
 app.MapDefaultEndpoints();
 app.UseFileServer();
 
+try
+{
+    using var warmupScope = app.Services.CreateScope();
+    var warmupAuth = warmupScope.ServiceProvider.GetRequiredService<IAuthService>();
+    await warmupAuth.LoginAsync(new LoginRequestDto { Email = "warmup@goatstore.local", Password = "warmup-password" });
+}
+catch (Exception ex)
+{
+    app.Logger.LogWarning(ex, "Auth warm-up failed");
+}
+
 app.Run();
 
 static IResult ToHttpResult(AuthResponseDto result) => result.Error switch

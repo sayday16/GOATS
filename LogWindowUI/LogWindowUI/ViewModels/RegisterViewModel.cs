@@ -200,7 +200,7 @@ namespace LogWindowUI.ViewModels
             }
             catch (Exception ex)
             {
-                ErrorMessage = $"Помилка з'єднання з базою даних: {ex.Message}";
+                ErrorMessage = $"Не вдалося зв'язатися із сервером: {ex.Message}";
             }
             finally
             {
@@ -216,6 +216,7 @@ namespace LogWindowUI.ViewModels
             loginWindow.DataContext = new LoginViewModel(authService);
             loginWindow.Show();
             CloseCurrentWindow();
+            _authService.Dispose();
         }
 
         private void CloseCurrentWindow()

@@ -1,25 +1,23 @@
-﻿using System.Windows;
+﻿using System.Net.Http;
+using System.Windows;
 using GoatStore.Core.Interfaces;
-using GoatStore.Core.Services;
-using GoatStore.DataAccess;
 using LogWindowUI.ViewModels;
 using LogWindowUI.Views;
-using Microsoft.EntityFrameworkCore;
+using LogWindowUI.Services;
 
 namespace LogWindowUI
 {
     public partial class App : Application
     {
-        private const string ConnectionString =
-            "Host=aws-1-eu-central-1.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.thpnzowfynymufgscfst;Password=DubMykolaSrakaHola;SSL Mode=Require;Trust Server Certificate=true";
+        private const string DefaultApiUrl = "http://localhost:5585";
 
-        public static IAuthService CreateAuthService()
+        private static readonly HttpClient ApiHttpClient = new()
         {
-            var optionsBuilder = new DbContextOptionsBuilder<GoatStoreDbContext>();
-            optionsBuilder.UseNpgsql(ConnectionString);
-            var dbContext = new GoatStoreDbContext(optionsBuilder.Options);
-            return new AuthService(dbContext);
-        }
+            BaseAddress = new Uri(
+                Environment.GetEnvironmentVariable("GOATSTORE_API_URL") ?? DefaultApiUrl)
+        };
+
+        public static IAuthService CreateAuthService() => new AuthApiClient(ApiHttpClient);
 
         protected override void OnStartup(StartupEventArgs e)
         {
