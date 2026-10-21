@@ -19,9 +19,20 @@ namespace LogWindowUI.Services
             RegisterRequestDto request, CancellationToken cancellationToken = default) =>
             PostAsync("api/auth/register", request, cancellationToken);
 
-        public Task<AuthResponseDto> LoginAsync(
-            LoginRequestDto request, CancellationToken cancellationToken = default) =>
-            PostAsync("api/auth/login", request, cancellationToken);
+        public async Task<AuthResponseDto> LoginAsync(
+            LoginRequestDto request, CancellationToken cancellationToken = default)
+        {
+            var response = await PostAsync("api/auth/login", request, cancellationToken);
+            if (response.IsSuccess && response.AccessToken is not null)
+                AuthSession.Start(response);
+            return response;
+        }
+
+        public async Task<AuthResponseDto> GetUserAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            using HttpResponseMessage response = await _httpClient.GetAsync("api/auth/me", cancellationToken);
+            return await ReadAsync(response, cancellationToken);
+        }
 
         public void Dispose()
         {
@@ -32,7 +43,12 @@ namespace LogWindowUI.Services
         {
             using HttpResponseMessage response =
                 await _httpClient.PostAsJsonAsync(path, request, cancellationToken);
+            return await ReadAsync(response, cancellationToken);
+        }
 
+        private static async Task<AuthResponseDto> ReadAsync(
+            HttpResponseMessage response, CancellationToken cancellationToken)
+        {
             AuthResponseDto? body = null;
             try
             {
@@ -48,9 +64,12 @@ namespace LogWindowUI.Services
             return new AuthResponseDto
             {
                 IsSuccess = false,
-                Message = response.StatusCode == HttpStatusCode.TooManyRequests
-                    ? "Забагато спроб. Спробуйте ще раз за хвилину."
-                    : $"Сервер повернув неочікувану відповідь ({(int)response.StatusCode})."
+                Message = response.StatusCode switch
+                {
+                    HttpStatusCode.TooManyRequests => "Забагато спроб. Спробуйте ще раз за хвилину.",
+                    HttpStatusCode.Unauthorized => "Сесія завершилась. Увійдіть знову.",
+                    _ => $"Сервер повернув неочікувану відповідь ({(int)response.StatusCode})."
+                }
             };
         }
     }

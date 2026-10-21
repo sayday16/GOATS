@@ -11,7 +11,7 @@ namespace LogWindowUI
     {
         private const string DefaultApiUrl = "http://localhost:5585";
 
-        private static readonly HttpClient ApiHttpClient = new()
+        private static readonly HttpClient ApiHttpClient = new(new BearerTokenHandler())
         {
             BaseAddress = new Uri(
                 Environment.GetEnvironmentVariable("GOATSTORE_API_URL") ?? DefaultApiUrl)

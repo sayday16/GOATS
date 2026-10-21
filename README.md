@@ -31,3 +31,22 @@
 * **Управління проєктом:** GitHub Projects Kanban-дошка (Todo → In Progress → Done).
 * **CI/CD:** GitHub Actions — автоматична збірка та запуск тестів на кожен Pull Request.
 * **Робочий процес (Workflow):** Створення окремих Feature-гілок + обов'язкове Code Review перед злиттям у `main`.
+
+##  Локальний запуск
+
+Рядок підключення до БД не зберігається в репозиторії. Кожен учасник один раз задає його у себе через user-secrets (значення попросіть у команди):
+
+```bash
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<рядок підключення>" --project GoatStore.API/GoatStore.API.Server
+```
+
+Більше нічого налаштовувати не треба: ключ підпису JWT для розробки вже лежить у `appsettings.Development.json`.
+
+На справжньому сервері обидва значення задаються змінними середовища `ConnectionStrings__DefaultConnection` і `Jwt__SigningKey` (власний випадковий ключ від 32 символів, не той, що для розробки).
+
+Запуск: спершу API, потім WPF-клієнт (він працює через API на `http://localhost:5585`, адресу можна змінити змінною `GOATSTORE_API_URL`):
+
+```bash
+dotnet run --project GoatStore.API/GoatStore.API.Server --launch-profile http
+dotnet run --project LogWindowUI/LogWindowUI
+```

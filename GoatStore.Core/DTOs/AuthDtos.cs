@@ -41,6 +41,9 @@ namespace GoatStore.Core.DTOs
         public Guid? StoreId { get; set; }
         public string? StoreName { get; set; }
 
+        public string? AccessToken { get; set; }
+        public DateTime? AccessTokenExpiresAt { get; set; }
+
         [JsonIgnore]
         public AuthError Error { get; set; }
     }
