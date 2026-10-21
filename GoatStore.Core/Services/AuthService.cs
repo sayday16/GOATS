@@ -137,6 +137,18 @@ namespace GoatStore.Core.Services
             return Success(user, user.Store, "Вхід виконано успішно!");
         }
 
+        public async Task<AuthResponseDto> GetUserAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            var user = await _context.Users
+                .AsNoTracking()
+                .Include(u => u.Store)
+                .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+            return user is null
+                ? Fail(AuthError.Unauthorized, "Сесія недійсна. Увійдіть знову.")
+                : Success(user, user.Store, "OK");
+        }
+
         private static string? ValidateRegistration(RegisterRequestDto request, string email, string storeName)
         {
             if (email.Length == 0 || email.Length > MaxEmailLength || !EmailValidator.IsValid(email))

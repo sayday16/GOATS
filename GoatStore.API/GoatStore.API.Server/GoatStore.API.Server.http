@@ -39,7 +39,8 @@ Content-Type: application/json
   "storePassword": "secretStorePass"
 }
 
-### 
+### Вхід: у відповіді є accessToken
+# @name login
 POST {{HostAddress}}/api/auth/login
 Content-Type: application/json
 
@@ -47,3 +48,10 @@ Content-Type: application/json
   "email": "owner@gmail.com",
   "password": "password123"
 }
+
+### Поточний користувач за токеном з попереднього запиту (очікується 200)
+GET {{HostAddress}}/api/auth/me
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### Без токена (очікується 401)
+GET {{HostAddress}}/api/auth/me
