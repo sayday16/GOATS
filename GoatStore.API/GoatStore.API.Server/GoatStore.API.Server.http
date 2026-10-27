@@ -39,7 +39,7 @@ Content-Type: application/json
   "storePassword": "secretStorePass"
 }
 
-### Вхід: у відповіді є accessToken
+###
 # @name login
 POST {{HostAddress}}/api/auth/login
 Content-Type: application/json
@@ -49,9 +49,48 @@ Content-Type: application/json
   "password": "password123"
 }
 
-### Поточний користувач за токеном з попереднього запиту (очікується 200)
+###
 GET {{HostAddress}}/api/auth/me
 Authorization: Bearer {{login.response.body.$.accessToken}}
 
-### Без токена (очікується 401)
+###
 GET {{HostAddress}}/api/auth/me
+
+###
+# @name createProduct
+POST {{HostAddress}}/api/products
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "title": "Levi's 501 vintage, W32",
+  "purchasePrice": 400,
+  "salePrice": 1200
+}
+
+###
+GET {{HostAddress}}/api/products
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+###
+GET {{HostAddress}}/api/products?status=InStock
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+###
+PUT {{HostAddress}}/api/products/{{createProduct.response.body.$.product.id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "title": "Levi's 501 vintage, W32 L34",
+  "purchasePrice": 400,
+  "salePrice": 1100
+}
+
+###
+POST {{HostAddress}}/api/products/{{createProduct.response.body.$.product.id}}/sell
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+###
+DELETE {{HostAddress}}/api/products/{{createProduct.response.body.$.product.id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
