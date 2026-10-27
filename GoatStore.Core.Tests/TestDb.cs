@@ -5,9 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GoatStore.Core.Tests
 {
-    /// <summary>
-    /// Окрема SQLite-база в пам'яті для кожного тесту. Живе, поки відкрите з'єднання.
-    /// </summary>
     public sealed class TestDb : IDisposable
     {
         private readonly SqliteConnection _connection;
@@ -28,14 +25,16 @@ namespace GoatStore.Core.Tests
 
         public GoatStoreDbContext CreateContext() => new(_options);
 
-        public Store AddStore(string name = "Test Store")
+        public Store AddStore(string name = "Test Store", string? storePassword = null)
         {
             using var context = CreateContext();
             var store = new Store
             {
                 Name = name,
                 NormalizedName = name.ToLowerInvariant(),
-                StorePasswordHash = "not-a-real-hash"
+                StorePasswordHash = storePassword is null
+                    ? "not-a-real-hash"
+                    : BCrypt.Net.BCrypt.HashPassword(storePassword)
             };
             context.Stores.Add(store);
             context.SaveChanges();
@@ -57,6 +56,21 @@ namespace GoatStore.Core.Tests
             context.Products.Add(product);
             context.SaveChanges();
             return product;
+        }
+
+        public User AddUser(Guid storeId, string email = "user@test.com", string password = "password123", UserRole role = UserRole.Seller)
+        {
+            using var context = CreateContext();
+            var user = new User
+            {
+                Email = email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+                Role = role,
+                StoreId = storeId
+            };
+            context.Users.Add(user);
+            context.SaveChanges();
+            return user;
         }
 
         public void Dispose() => _connection.Dispose();
