@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using GoatStore.DataAccess.Entities;
-using Xunit;
 
 namespace GoatStore.DataAccess.Tests;
 
@@ -103,5 +102,93 @@ public class GoatStoreDbContextTests
         {
             await context.SaveChangesAsync();
         });
+    }
+
+    [Fact]
+    public async Task DeleteStore_WithProducts_ThrowsDbUpdateException()
+    {
+        using var context = TestDb.CreateInMemoryContext();
+
+        var store = new Store
+        {
+            Name = "Shop With Products",
+            NormalizedName = "shop with products"
+        };
+        context.Stores.Add(store);
+        await context.SaveChangesAsync();
+
+        context.Products.Add(new Product
+        {
+            Title = "Levi's 501",
+            PurchasePrice = 400m,
+            SalePrice = 1200m,
+            StoreId = store.Id
+        });
+        await context.SaveChangesAsync();
+
+        context.ChangeTracker.Clear();
+
+        var storeToDelete = await context.Stores.FirstAsync(s => s.Id == store.Id);
+        context.Stores.Remove(storeToDelete);
+
+        await Assert.ThrowsAsync<DbUpdateException>(async () =>
+        {
+            await context.SaveChangesAsync();
+        });
+    }
+
+    [Fact]
+    public async Task UserRole_IsStoredAsString()
+    {
+        using var context = TestDb.CreateInMemoryContext();
+
+        var store = new Store
+        {
+            Name = "Role Shop",
+            NormalizedName = "role shop"
+        };
+        context.Stores.Add(store);
+        context.Users.Add(new User
+        {
+            Email = "admin@gmail.com",
+            PasswordHash = "hash",
+            Role = UserRole.Admin,
+            Store = store
+        });
+        await context.SaveChangesAsync();
+
+        var storedRole = await context.Database
+            .SqlQueryRaw<string>("SELECT \"Role\" AS \"Value\" FROM \"Users\"")
+            .SingleAsync();
+
+        Assert.Equal("Admin", storedRole);
+    }
+
+    [Fact]
+    public async Task ProductStatus_IsStoredAsString()
+    {
+        using var context = TestDb.CreateInMemoryContext();
+
+        var store = new Store
+        {
+            Name = "Status Shop",
+            NormalizedName = "status shop"
+        };
+        context.Stores.Add(store);
+        context.Products.Add(new Product
+        {
+            Title = "Nike Hoodie",
+            PurchasePrice = 300m,
+            SalePrice = 900m,
+            Status = ProductStatus.Sold,
+            Store = store
+        });
+        await context.SaveChangesAsync();
+
+        var storedStatus = await context.Database
+            .SqlQueryRaw<string>("SELECT \"Status\" AS \"Value\" FROM \"Products\"")
+            .SingleAsync();
+
+        Assert.Equal("Sold", storedStatus);
     }
 }

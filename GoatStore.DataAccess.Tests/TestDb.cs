@@ -12,7 +12,7 @@ public static class TestDb
         connection.Open();
 
         var options = new DbContextOptionsBuilder<GoatStoreDbContext>()
-            .UseSqlite(connection)
+            .UseSqlite(connection, contextOwnsConnection: true)
             .Options;
 
         var context = new GoatStoreDbContext(options);
