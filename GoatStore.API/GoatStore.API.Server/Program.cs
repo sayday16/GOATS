@@ -18,7 +18,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<GoatStoreDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddGoatAuth(builder.Environment);
+builder.Services.AddGoatAuth(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 
@@ -32,6 +32,10 @@ app.MapProductEndpoints();
 app.MapDefaultEndpoints();
 app.UseFileServer();
 
-await app.WarmUpAuthAsync();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    await app.WarmUpAuthAsync();
+}
 
 app.Run();
+public partial class Program { }

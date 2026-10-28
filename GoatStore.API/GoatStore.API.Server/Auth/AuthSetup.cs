@@ -12,8 +12,11 @@ namespace GoatStore.API.Server.Auth
         public const string AdminOnlyPolicy = "AdminOnly";
         public const string AuthRateLimitPolicy = "auth";
 
-        public static IServiceCollection AddGoatAuth(this IServiceCollection services, IHostEnvironment environment)
+        public static IServiceCollection AddGoatAuth(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
         {
+            var authPermitLimit = configuration.GetValue<int?>("RateLimiting:AuthPermitLimit")
+                ?? (environment.IsDevelopment() ? 100 : 10);
+
             services.AddOptions<JwtOptions>()
                 .BindConfiguration(JwtOptions.SectionName)
                 .ValidateDataAnnotations()
@@ -54,7 +57,7 @@ namespace GoatStore.API.Server.Auth
                         httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                         _ => new FixedWindowRateLimiterOptions
                         {
-                            PermitLimit = environment.IsDevelopment() ? 100 : 10,
+                            PermitLimit = authPermitLimit,
                             Window = TimeSpan.FromMinutes(1),
                             QueueLimit = 0
                         }));
