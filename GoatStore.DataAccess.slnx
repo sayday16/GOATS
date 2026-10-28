@@ -4,6 +4,7 @@
   <Project Path="GoatStore.API.Tests/GoatStore.API.Tests.csproj" />
   <Project Path="GoatStore.Core/GoatStore.Core.csproj" />
   <Project Path="GoatStore.Core.Tests/GoatStore.Core.Tests.csproj" />
+  <Project Path="GoatStore.DataAccess.Tests/GoatStore.DataAccess.Tests.csproj" />
   <Project Path="GoatStore.DataAccess/GoatStore.DataAccess.csproj" />
   <Project Path="LogWindowUI/LogWindowUI/LogWindowUI.csproj" />
   <Project Path="LogWindowUI.Tests/LogWindowUI.Tests.csproj" />
