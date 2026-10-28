@@ -18,7 +18,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<GoatStoreDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddGoatAuth(builder.Environment);
+builder.Services.AddGoatAuth(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 
