@@ -51,6 +51,20 @@ namespace LogWindowUI.Tests
         }
 
         [Fact]
+        public void RegisterCommand_WhileRequestInProgress_CannotExecuteAgain()
+        {
+            _authService.Pending = new();
+            var viewModel = CreateFilledViewModel();
+
+            viewModel.RegisterCommand.Execute(null);
+            var canExecuteWhileBusy = viewModel.RegisterCommand.CanExecute(null);
+            _authService.Pending.SetResult(new() { IsSuccess = false, Message = "Помилка." });
+
+            Assert.False(canExecuteWhileBusy);
+            Assert.True(viewModel.RegisterCommand.CanExecute(null));
+        }
+
+        [Fact]
         public void RegisterCommand_ServiceThrows_ShowsConnectionError()
         {
             _authService.Exception = new HttpRequestException("Connection refused");
