@@ -1,6 +1,7 @@
 using GoatStore.Core.DTOs;
 using GoatStore.Core.Services;
 using GoatStore.DataAccess.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace GoatStore.Core.Tests
 {
@@ -293,6 +294,43 @@ namespace GoatStore.Core.Tests
             var result = await CreateService().LoginAsync(new LoginRequestDto { Email = email, Password = password });
 
             Assert.Equal(AuthError.Validation, result.Error);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_EmailTakenByParallelRequest_ReturnsConflict()
+        {
+            var store = _db.AddStore("GoatShop", StoreCode);
+            var interceptor = new BeforeSaveInterceptor(() => _db.AddUser(store.Id, "seller@test.com"));
+
+            var result = await new AuthService(_db.CreateContext(interceptor)).RegisterAsync(SellerRequest());
+
+            Assert.Equal(AuthError.Conflict, result.Error);
+            Assert.Equal("Користувач із таким Email вже існує.", result.Message);
+            using var context = _db.CreateContext();
+            Assert.Single(context.Users);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_StoreNameTakenByParallelRequest_ReturnsConflict()
+        {
+            var interceptor = new BeforeSaveInterceptor(() => _db.AddStore("GoatShop"));
+
+            var result = await new AuthService(_db.CreateContext(interceptor)).RegisterAsync(AdminRequest());
+
+            Assert.Equal(AuthError.Conflict, result.Error);
+            Assert.StartsWith("Магазин із такою назвою вже існує", result.Message);
+            using var context = _db.CreateContext();
+            Assert.Single(context.Stores);
+            Assert.Empty(context.Users);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_OtherDbError_IsRethrown()
+        {
+            var interceptor = new BeforeSaveInterceptor(() => throw new DbUpdateException("disk full"));
+
+            await Assert.ThrowsAsync<DbUpdateException>(
+                () => new AuthService(_db.CreateContext(interceptor)).RegisterAsync(AdminRequest()));
         }
 
         [Fact]

@@ -23,6 +23,15 @@ namespace LogWindowUI.Tests
         }
 
         [Fact]
+        public void DefaultConstructor_CreatesCommands()
+        {
+            var viewModel = new LoginViewModel();
+
+            Assert.NotNull(viewModel.LoginCommand);
+            Assert.NotNull(viewModel.GoToRegisterCommand);
+        }
+
+        [Fact]
         public void LoginCommand_FilledFields_CanExecute()
         {
             Assert.True(CreateViewModel().LoginCommand.CanExecute(null));

@@ -32,7 +32,7 @@ jobs:
       run: dotnet build GoatStore.DataAccess.slnx --no-restore
 
     - name: Run tests and collect coverage
-      run: dotnet test GoatStore.DataAccess.slnx --no-build --collect:"XPlat Code Coverage" --logger trx --results-directory TestResults
+      run: dotnet test GoatStore.DataAccess.slnx --no-build --collect:"XPlat Code Coverage" --settings coverage.runsettings --logger trx --results-directory TestResults
 
     - name: Upload test results and coverage
       if: always()

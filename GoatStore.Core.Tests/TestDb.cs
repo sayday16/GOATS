@@ -2,6 +2,7 @@ using GoatStore.DataAccess;
 using GoatStore.DataAccess.Entities;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace GoatStore.Core.Tests
 {
@@ -24,6 +25,9 @@ namespace GoatStore.Core.Tests
         }
 
         public GoatStoreDbContext CreateContext() => new(_options);
+
+        public GoatStoreDbContext CreateContext(IInterceptor interceptor) =>
+            new(new DbContextOptionsBuilder<GoatStoreDbContext>(_options).AddInterceptors(interceptor).Options);
 
         public Store AddStore(string name = "Test Store", string? storePassword = null)
         {
@@ -79,5 +83,23 @@ namespace GoatStore.Core.Tests
     public sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    // Виконує дію один раз перед першим SaveChanges: так імітуємо інший запит, що встиг записати дані раніше
+    public sealed class BeforeSaveInterceptor(Action action) : SaveChangesInterceptor
+    {
+        private bool _done;
+
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            if (!_done)
+            {
+                _done = true;
+                action();
+            }
+
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
     }
 }
