@@ -10,15 +10,20 @@ namespace GoatStore.API.Tests;
 
 public class TestApplicationFactory : WebApplicationFactory<Program>
 {
+    public const string SigningKey = "SuperSecretTestKeyForJwtThatIsLongEnough123!";
+    public const string Issuer = "TestIssuer";
+    public const string Audience = "TestAudience";
+
     private DbConnection? _connection;
 
     public TestApplicationFactory()
     {
         Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", "DataSource=:memory:");
-        Environment.SetEnvironmentVariable("Jwt__SigningKey", "SuperSecretTestKeyForJwtThatIsLongEnough123!");
-        Environment.SetEnvironmentVariable("Jwt__Issuer", "TestIssuer");
-        Environment.SetEnvironmentVariable("Jwt__Audience", "TestAudience");
+        Environment.SetEnvironmentVariable("Jwt__SigningKey", SigningKey);
+        Environment.SetEnvironmentVariable("Jwt__Issuer", Issuer);
+        Environment.SetEnvironmentVariable("Jwt__Audience", Audience);
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Testing");
+        Environment.SetEnvironmentVariable("RateLimiting__AuthPermitLimit", "1000");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

@@ -11,6 +11,7 @@ namespace LogWindowUI.Tests
     {
         public AuthResponseDto Response { get; set; } = new() { IsSuccess = false, Message = "Помилка." };
         public Exception? Exception { get; set; }
+        public TaskCompletionSource<AuthResponseDto>? Pending { get; set; }
         public LoginRequestDto? LastLogin { get; private set; }
         public RegisterRequestDto? LastRegister { get; private set; }
 
@@ -32,8 +33,11 @@ namespace LogWindowUI.Tests
         {
         }
 
-        private Task<AuthResponseDto> Respond() =>
-            Exception is null ? Task.FromResult(Response) : Task.FromException<AuthResponseDto>(Exception);
+        private Task<AuthResponseDto> Respond()
+        {
+            if (Pending is not null) return Pending.Task;
+            return Exception is null ? Task.FromResult(Response) : Task.FromException<AuthResponseDto>(Exception);
+        }
     }
 
     public sealed class FakeHttpHandler : HttpMessageHandler

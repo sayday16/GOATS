@@ -54,6 +54,33 @@ namespace LogWindowUI.Tests
         }
 
         [Fact]
+        public void LoginCommand_WhileRequestInProgress_CannotExecuteAgain()
+        {
+            _authService.Pending = new();
+            var viewModel = CreateViewModel();
+
+            viewModel.LoginCommand.Execute(null);
+            var canExecuteWhileBusy = viewModel.LoginCommand.CanExecute(null);
+            _authService.Pending.SetResult(new() { IsSuccess = false, Message = "Невірний Email або пароль." });
+
+            Assert.False(canExecuteWhileBusy);
+            Assert.True(viewModel.LoginCommand.CanExecute(null));
+        }
+
+        [Fact]
+        public void LoginCommand_NewAttempt_ClearsPreviousError()
+        {
+            _authService.Pending = new();
+            var viewModel = CreateViewModel();
+            viewModel.ErrorMessage = "Стара помилка";
+
+            viewModel.LoginCommand.Execute(null);
+
+            Assert.False(viewModel.HasError);
+            _authService.Pending.SetResult(new() { IsSuccess = false, Message = "Помилка." });
+        }
+
+        [Fact]
         public void LoginCommand_SendsEnteredEmailAndPassword()
         {
             var viewModel = CreateViewModel("owner@test.com", "secret123");
