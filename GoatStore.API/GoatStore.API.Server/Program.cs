@@ -32,6 +32,10 @@ app.MapProductEndpoints();
 app.MapDefaultEndpoints();
 app.UseFileServer();
 
-await app.WarmUpAuthAsync();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    await app.WarmUpAuthAsync();
+}
 
 app.Run();
+public partial class Program { }
