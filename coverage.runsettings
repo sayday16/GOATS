@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Що не рахується в покриття: вікна WPF (XAML + code-behind), App/MainWindow,
+     міграції EF і шаблонні ServiceDefaults Aspire. Їх перевіряє ручний чекліст, а не unit-тести. -->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Exclude>[LogWindowUI]LogWindowUI.Views.*,[LogWindowUI]LogWindowUI.App,[LogWindowUI]LogWindowUI.MainWindow,[GoatStore.DataAccess]GoatStore.DataAccess.Migrations.*,[GoatStore.API.Server]Microsoft.Extensions.Hosting.Extensions</Exclude>
+          <ExcludeByFile>**/obj/**/*.cs</ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
