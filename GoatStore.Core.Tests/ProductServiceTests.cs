@@ -146,6 +146,29 @@ namespace GoatStore.Core.Tests
         }
 
         [Fact]
+        public async Task UpdateAsync_InvalidRequest_ReturnsValidationAndKeepsProduct()
+        {
+            var store = _db.AddStore();
+            var product = _db.AddProduct(store.Id, "Old Title");
+
+            var result = await CreateService().UpdateAsync(store.Id, product.Id, ValidRequest("   "));
+
+            Assert.Equal(ProductError.Validation, result.Error);
+            using var context = _db.CreateContext();
+            Assert.Equal("Old Title", context.Products.Single().Title);
+        }
+
+        [Fact]
+        public async Task DeleteAsync_UnknownProduct_ReturnsNotFound()
+        {
+            var store = _db.AddStore();
+
+            var result = await CreateService().DeleteAsync(store.Id, Guid.NewGuid());
+
+            Assert.Equal(ProductError.NotFound, result.Error);
+        }
+
+        [Fact]
         public async Task SellAsync_InStockProduct_MarksSoldWithCurrentTime()
         {
             var store = _db.AddStore();

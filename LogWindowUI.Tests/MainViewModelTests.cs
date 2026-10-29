@@ -253,5 +253,47 @@ namespace LogWindowUI.Tests
 
             Assert.Equal("GoatShop", viewModel.StoreLocation);
         }
+
+        [Fact]
+        public void Constructor_WithStoreName_ShowsItAsStoreLocation()
+        {
+            var viewModel = new MainViewModel(new AuthResponseDto { Email = "owner@gmail.com", StoreName = "GoatShop" });
+
+            Assert.Equal("GoatShop", viewModel.StoreLocation);
+        }
+
+        [Theory]
+        [InlineData(nameof(MainViewModel.ShiftInfo))]
+        [InlineData(nameof(MainViewModel.StoreLocation))]
+        [InlineData(nameof(MainViewModel.CashRegister))]
+        [InlineData(nameof(MainViewModel.ReceiptNumber))]
+        [InlineData(nameof(MainViewModel.SearchText))]
+        public void TextProperty_Set_UpdatesValueAndFiresPropertyChanged(string property)
+        {
+            var viewModel = new MainViewModel();
+            string? firedFor = null;
+            viewModel.PropertyChanged += (_, args) => firedFor = args.PropertyName;
+
+            typeof(MainViewModel).GetProperty(property)!.SetValue(viewModel, "нове значення");
+
+            Assert.Equal("нове значення", typeof(MainViewModel).GetProperty(property)!.GetValue(viewModel));
+            Assert.Equal(property, firedFor);
+        }
+
+        [Fact]
+        public void TotalsText_ShowsFormattedAmounts()
+        {
+            var viewModel = new MainViewModel();
+            viewModel.ClearCartCommand.Execute(null);
+            viewModel.CartItems.Add(new CartItemViewModel { UnitPrice = 300m, Quantity = 2 });
+            viewModel.CartItems = viewModel.CartItems;
+            viewModel.Discount = 100m;
+
+            Assert.Equal("2 товари", viewModel.TotalItemsCountText);
+            Assert.Equal("600 ₴", viewModel.SubtotalText);
+            Assert.Equal("-100 ₴", viewModel.DiscountText);
+            Assert.Equal("500 ₴", viewModel.TotalPayableText);
+            Assert.Equal("600 ₴", viewModel.CartItems[0].TotalPriceText);
+        }
     }
 }

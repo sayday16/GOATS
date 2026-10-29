@@ -51,6 +51,20 @@ namespace LogWindowUI.Tests
         }
 
         [Fact]
+        public void RegisterCommand_WhileRequestInProgress_CannotExecuteAgain()
+        {
+            _authService.Pending = new();
+            var viewModel = CreateFilledViewModel();
+
+            viewModel.RegisterCommand.Execute(null);
+            var canExecuteWhileBusy = viewModel.RegisterCommand.CanExecute(null);
+            _authService.Pending.SetResult(new() { IsSuccess = false, Message = "Помилка." });
+
+            Assert.False(canExecuteWhileBusy);
+            Assert.True(viewModel.RegisterCommand.CanExecute(null));
+        }
+
+        [Fact]
         public void RegisterCommand_ServiceThrows_ShowsConnectionError()
         {
             _authService.Exception = new HttpRequestException("Connection refused");
@@ -80,6 +94,26 @@ namespace LogWindowUI.Tests
         }
 
         [Fact]
+        public void DefaultConstructor_CreatesCommands()
+        {
+            var viewModel = new RegisterViewModel();
+
+            Assert.NotNull(viewModel.RegisterCommand);
+            Assert.NotNull(viewModel.GoToLoginCommand);
+        }
+
+        [Fact]
+        public void SuccessMessage_Set_ShowsSuccess()
+        {
+            var viewModel = CreateFilledViewModel();
+
+            viewModel.SuccessMessage = "Магазин створено";
+
+            Assert.Equal("Магазин створено", viewModel.SuccessMessage);
+            Assert.True(viewModel.HasSuccess);
+        }
+
+        [Fact]
         public void SelectedRole_ChangesStoreLabels()
         {
             var viewModel = CreateFilledViewModel();
@@ -87,10 +121,12 @@ namespace LogWindowUI.Tests
             viewModel.IsSeller = true;
             var sellerLabel = viewModel.StoreNameLabel;
             var sellerPlaceholder = viewModel.StorePasswordPlaceholder;
+            var sellerNamePlaceholder = viewModel.StoreNamePlaceholder;
             viewModel.IsAdmin = true;
 
             Assert.NotEqual(sellerLabel, viewModel.StoreNameLabel);
             Assert.NotEqual(sellerPlaceholder, viewModel.StorePasswordPlaceholder);
+            Assert.NotEqual(sellerNamePlaceholder, viewModel.StoreNamePlaceholder);
             Assert.True(viewModel.IsAdmin);
             Assert.False(viewModel.IsSeller);
         }

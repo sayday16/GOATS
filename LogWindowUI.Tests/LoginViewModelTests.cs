@@ -23,6 +23,15 @@ namespace LogWindowUI.Tests
         }
 
         [Fact]
+        public void DefaultConstructor_CreatesCommands()
+        {
+            var viewModel = new LoginViewModel();
+
+            Assert.NotNull(viewModel.LoginCommand);
+            Assert.NotNull(viewModel.GoToRegisterCommand);
+        }
+
+        [Fact]
         public void LoginCommand_FilledFields_CanExecute()
         {
             Assert.True(CreateViewModel().LoginCommand.CanExecute(null));
@@ -51,6 +60,33 @@ namespace LogWindowUI.Tests
 
             Assert.StartsWith("Не вдалося зв'язатися із сервером", viewModel.ErrorMessage);
             Assert.True(viewModel.HasError);
+        }
+
+        [Fact]
+        public void LoginCommand_WhileRequestInProgress_CannotExecuteAgain()
+        {
+            _authService.Pending = new();
+            var viewModel = CreateViewModel();
+
+            viewModel.LoginCommand.Execute(null);
+            var canExecuteWhileBusy = viewModel.LoginCommand.CanExecute(null);
+            _authService.Pending.SetResult(new() { IsSuccess = false, Message = "Невірний Email або пароль." });
+
+            Assert.False(canExecuteWhileBusy);
+            Assert.True(viewModel.LoginCommand.CanExecute(null));
+        }
+
+        [Fact]
+        public void LoginCommand_NewAttempt_ClearsPreviousError()
+        {
+            _authService.Pending = new();
+            var viewModel = CreateViewModel();
+            viewModel.ErrorMessage = "Стара помилка";
+
+            viewModel.LoginCommand.Execute(null);
+
+            Assert.False(viewModel.HasError);
+            _authService.Pending.SetResult(new() { IsSuccess = false, Message = "Помилка." });
         }
 
         [Fact]
