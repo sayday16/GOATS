@@ -64,44 +64,66 @@ public class ProductEndpointsTests : IClassFixture<TestApplicationFactory>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    [Fact]
-    public async Task PutProduct_AsOwner_UpdatesProduct()
+    private async Task<string> CreateOwnProductAsync(string title = "Test Product")
     {
         var token = await _client.RegisterAndLoginAsync(ApiTestHelpers.UniqueEmail("owner"), ApiTestHelpers.OwnerRole, ApiTestHelpers.UniqueStoreName());
         _client.UseToken(token);
-        var productId = await _client.CreateProductAsync();
+        return await _client.CreateProductAsync(title);
+    }
 
-        var response = await _client.PutAsJsonAsync($"/api/products/{productId}", new { Title = "Updated", PurchasePrice = 60m, SalePrice = 150m });
-        var product = await _client.GetFromJsonAsync<JsonObject>($"/api/products/{productId}");
+    private Task<HttpResponseMessage> UpdateTitleAsync(string productId) =>
+        _client.PutAsJsonAsync($"/api/products/{productId}", new { Title = "Updated", PurchasePrice = 60m, SalePrice = 150m });
+
+    [Fact]
+    public async Task PutProduct_AsOwner_ReturnsOk()
+    {
+        var productId = await CreateOwnProductAsync();
+
+        var response = await UpdateTitleAsync(productId);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("Updated", product!["product"]!["title"]!.ToString());
     }
 
     [Fact]
-    public async Task DeleteProduct_AsOwner_RemovesProduct()
+    public async Task PutProduct_AsOwner_SavesNewTitle()
     {
-        var token = await _client.RegisterAndLoginAsync(ApiTestHelpers.UniqueEmail("owner"), ApiTestHelpers.OwnerRole, ApiTestHelpers.UniqueStoreName());
-        _client.UseToken(token);
-        var productId = await _client.CreateProductAsync();
+        var productId = await CreateOwnProductAsync();
+
+        await UpdateTitleAsync(productId);
+        var product = await _client.GetFromJsonAsync<JsonObject>($"/api/products/{productId}");
+
+        Assert.Equal("Updated", product?["product"]?["title"]?.ToString());
+    }
+
+    [Fact]
+    public async Task DeleteProduct_AsOwner_ReturnsOk()
+    {
+        var productId = await CreateOwnProductAsync();
 
         var response = await _client.DeleteAsync($"/api/products/{productId}");
-        var afterDelete = await _client.GetAsync($"/api/products/{productId}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteProduct_AsOwner_ProductIsNoLongerFound()
+    {
+        var productId = await CreateOwnProductAsync();
+
+        await _client.DeleteAsync($"/api/products/{productId}");
+        var afterDelete = await _client.GetAsync($"/api/products/{productId}");
+
         Assert.Equal(HttpStatusCode.NotFound, afterDelete.StatusCode);
     }
 
     [Fact]
-    public async Task GetProducts_AsOwner_ReturnsOwnProducts()
+    public async Task GetProducts_AsOwner_ReturnsOnlyOwnProducts()
     {
-        var token = await _client.RegisterAndLoginAsync(ApiTestHelpers.UniqueEmail("owner"), ApiTestHelpers.OwnerRole, ApiTestHelpers.UniqueStoreName());
-        _client.UseToken(token);
-        await _client.CreateProductAsync("Levi's 501");
+        await CreateOwnProductAsync("Levi's 501");
 
         var products = await _client.GetFromJsonAsync<JsonArray>("/api/products");
 
-        Assert.Equal("Levi's 501", Assert.Single(products!)!["title"]!.ToString());
+        Assert.Equal(new[] { "Levi's 501" }, products!.Select(p => p?["title"]?.ToString()));
     }
 
     [Fact]

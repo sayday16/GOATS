@@ -43,55 +43,115 @@ namespace GoatStore.API.Tests
             ValidateLifetime = false
         };
 
-        [Fact]
-        public void WithAccessToken_SuccessfulResponse_AddsTokenWithClaims()
+        private static AuthResponseDto IssueTokenForOwner()
         {
             var response = SuccessResponse();
-
             CreateService().WithAccessToken(response);
+            return response;
+        }
 
-            var token = Read(response);
-            Assert.Equal(response.UserId.ToString(), token.Claims.Single(c => c.Type == GoatClaims.UserId).Value);
-            Assert.Equal("owner@test.com", token.Claims.Single(c => c.Type == GoatClaims.Email).Value);
-            Assert.Equal("Admin", token.Claims.Single(c => c.Type == GoatClaims.Role).Value);
-            Assert.Equal(response.StoreId.ToString(), token.Claims.Single(c => c.Type == GoatClaims.StoreId).Value);
-            Assert.False(string.IsNullOrEmpty(token.Claims.Single(c => c.Type == JwtRegisteredClaimNames.Jti).Value));
+        private static string ClaimValue(AuthResponseDto response, string type) =>
+            Read(response).Claims.Single(c => c.Type == type).Value;
+
+        private static AuthResponseDto IssueTokenForFailedResponse()
+        {
+            var response = new AuthResponseDto { IsSuccess = false, Error = AuthError.Unauthorized };
+            CreateService().WithAccessToken(response);
+            return response;
+        }
+
+        private static DateTime ExpectedExpiry => Now.UtcDateTime.AddMinutes(Options.AccessTokenMinutes);
+
+        [Fact]
+        public void WithAccessToken_SuccessfulResponse_AddsUserIdClaim()
+        {
+            var response = IssueTokenForOwner();
+
+            Assert.Equal(response.UserId.ToString(), ClaimValue(response, GoatClaims.UserId));
         }
 
         [Fact]
-        public void WithAccessToken_ExpiresAfterConfiguredMinutes()
+        public void WithAccessToken_SuccessfulResponse_AddsEmailClaim()
         {
-            var response = SuccessResponse();
+            var response = IssueTokenForOwner();
 
-            CreateService().WithAccessToken(response);
-
-            var expected = Now.UtcDateTime.AddMinutes(Options.AccessTokenMinutes);
-            Assert.Equal(expected, response.AccessTokenExpiresAt);
-            Assert.Equal(expected, Read(response).ValidTo);
+            Assert.Equal("owner@test.com", ClaimValue(response, GoatClaims.Email));
         }
 
         [Fact]
-        public void WithAccessToken_Token_IsValidWithSameKeyAndRejectedWithOtherKey()
+        public void WithAccessToken_SuccessfulResponse_AddsRoleClaim()
         {
-            var response = SuccessResponse();
-            CreateService().WithAccessToken(response);
-            var handler = new JwtSecurityTokenHandler();
+            var response = IssueTokenForOwner();
 
-            handler.ValidateToken(response.AccessToken, ValidationParameters(Options.CreateSigningKey()), out _);
+            Assert.Equal("Admin", ClaimValue(response, GoatClaims.Role));
+        }
 
+        [Fact]
+        public void WithAccessToken_SuccessfulResponse_AddsStoreIdClaim()
+        {
+            var response = IssueTokenForOwner();
+
+            Assert.Equal(response.StoreId.ToString(), ClaimValue(response, GoatClaims.StoreId));
+        }
+
+        [Fact]
+        public void WithAccessToken_SuccessfulResponse_AddsTokenId()
+        {
+            var response = IssueTokenForOwner();
+
+            Assert.False(string.IsNullOrEmpty(ClaimValue(response, JwtRegisteredClaimNames.Jti)));
+        }
+
+        [Fact]
+        public void WithAccessToken_ReturnsExpiryAfterConfiguredMinutes()
+        {
+            var response = IssueTokenForOwner();
+
+            Assert.Equal(ExpectedExpiry, response.AccessTokenExpiresAt);
+        }
+
+        [Fact]
+        public void WithAccessToken_TokenExpiresAfterConfiguredMinutes()
+        {
+            var response = IssueTokenForOwner();
+
+            Assert.Equal(ExpectedExpiry, Read(response).ValidTo);
+        }
+
+        [Fact]
+        public void WithAccessToken_Token_IsValidWithSameKey()
+        {
+            var response = IssueTokenForOwner();
+
+            var exception = Record.Exception(() => new JwtSecurityTokenHandler()
+                .ValidateToken(response.AccessToken, ValidationParameters(Options.CreateSigningKey()), out _));
+
+            Assert.Null(exception);
+        }
+
+        [Fact]
+        public void WithAccessToken_Token_IsRejectedWithOtherKey()
+        {
+            var response = IssueTokenForOwner();
             var otherKey = new SymmetricSecurityKey("another-signing-key-0123456789abcdef0123"u8.ToArray());
-            Assert.ThrowsAny<SecurityTokenException>(() =>
-                handler.ValidateToken(response.AccessToken, ValidationParameters(otherKey), out _));
+
+            Assert.ThrowsAny<SecurityTokenException>(() => new JwtSecurityTokenHandler()
+                .ValidateToken(response.AccessToken, ValidationParameters(otherKey), out _));
         }
 
         [Fact]
         public void WithAccessToken_FailedResponse_ReturnsWithoutToken()
         {
-            var response = new AuthResponseDto { IsSuccess = false, Error = AuthError.Unauthorized };
-
-            CreateService().WithAccessToken(response);
+            var response = IssueTokenForFailedResponse();
 
             Assert.Null(response.AccessToken);
+        }
+
+        [Fact]
+        public void WithAccessToken_FailedResponse_ReturnsWithoutExpiry()
+        {
+            var response = IssueTokenForFailedResponse();
+
             Assert.Null(response.AccessTokenExpiresAt);
         }
 
