@@ -1,5 +1,6 @@
 using GoatStore.Core.DTOs;
 using GoatStore.Core.Services;
+using GoatStore.DataAccess;
 using GoatStore.DataAccess.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +15,12 @@ namespace GoatStore.Core.Tests
         public void Dispose() => _db.Dispose();
 
         private AuthService CreateService() => new(_db.CreateContext());
+
+        private TResult Query<TResult>(Func<GoatStoreDbContext, TResult> query)
+        {
+            using var context = _db.CreateContext();
+            return query(context);
+        }
 
         private static RegisterRequestDto AdminRequest(string storeName = "GoatShop", string email = "owner@test.com") => new()
         {
@@ -35,22 +42,144 @@ namespace GoatStore.Core.Tests
             StorePassword = storePassword
         };
 
-        [Fact]
-        public async Task RegisterAsync_AdminNewStore_CreatesStoreAndUser()
+        private Task<AuthResponseDto> RegisterAdminAsync() => CreateService().RegisterAsync(AdminRequest());
+
+        private async Task<(Store Store, AuthResponseDto Result)> RegisterSellerIntoExistingStoreAsync()
         {
-            var result = await CreateService().RegisterAsync(AdminRequest());
+            var store = _db.AddStore("GoatShop", StoreCode);
+            var result = await CreateService().RegisterAsync(SellerRequest());
+            return (store, result);
+        }
+
+        private async Task<AuthResponseDto> RegisterAdminWithTakenStoreNameAsync(string storeName)
+        {
+            _db.AddStore("GoatShop");
+            return await CreateService().RegisterAsync(AdminRequest(storeName));
+        }
+
+        private Task<AuthResponseDto> RegisterAdminWithShortStorePasswordAsync()
+        {
+            var request = AdminRequest();
+            request.StorePassword = "1234567";
+            return CreateService().RegisterAsync(request);
+        }
+
+        private Task<AuthResponseDto> RegisterSellerWithWrongStorePasswordAsync()
+        {
+            _db.AddStore("GoatShop", StoreCode);
+            return CreateService().RegisterAsync(SellerRequest(storePassword: "wrongcode123"));
+        }
+
+        private async Task<AuthResponseDto> RegisterDuplicateEmailInOtherCaseAsync()
+        {
+            await CreateService().RegisterAsync(AdminRequest("Store A", "owner@gmail.com"));
+            return await CreateService().RegisterAsync(AdminRequest("Store B", "Owner@Gmail.com"));
+        }
+
+        private async Task<(Store Store, User User, AuthResponseDto Result)> LoginAsOwnerAsync()
+        {
+            var store = _db.AddStore("GoatShop");
+            var user = _db.AddUser(store.Id, "owner@test.com", "password123", UserRole.Admin);
+            var result = await CreateService().LoginAsync(new LoginRequestDto { Email = "owner@test.com", Password = "password123" });
+            return (store, user, result);
+        }
+
+        private Task<AuthResponseDto> LoginWithWrongPasswordAsync()
+        {
+            var store = _db.AddStore();
+            _db.AddUser(store.Id, "owner@test.com", "password123");
+            return CreateService().LoginAsync(new LoginRequestDto { Email = "owner@test.com", Password = "wrongpass123" });
+        }
+
+        private async Task<(AuthResponseDto WrongPassword, AuthResponseDto UnknownEmail)> LoginWithWrongPasswordAndUnknownEmailAsync()
+        {
+            var wrongPassword = await LoginWithWrongPasswordAsync();
+            var unknownEmail = await CreateService().LoginAsync(new LoginRequestDto { Email = "nobody@test.com", Password = "wrongpass123" });
+            return (wrongPassword, unknownEmail);
+        }
+
+        private Task<AuthResponseDto> RegisterSellerWhileParallelRequestTakesEmailAsync()
+        {
+            var store = _db.AddStore("GoatShop", StoreCode);
+            var interceptor = new BeforeSaveInterceptor(() => _db.AddUser(store.Id, "seller@test.com"));
+            return new AuthService(_db.CreateContext(interceptor)).RegisterAsync(SellerRequest());
+        }
+
+        private Task<AuthResponseDto> RegisterAdminWhileParallelRequestTakesStoreNameAsync()
+        {
+            var interceptor = new BeforeSaveInterceptor(() => _db.AddStore("GoatShop"));
+            return new AuthService(_db.CreateContext(interceptor)).RegisterAsync(AdminRequest());
+        }
+
+        private Task<AuthResponseDto> GetExistingSellerAsync()
+        {
+            var store = _db.AddStore("GoatShop");
+            var user = _db.AddUser(store.Id, "seller@test.com");
+            return CreateService().GetUserAsync(user.Id);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_AdminNewStore_ReturnsSuccess()
+        {
+            var result = await RegisterAdminAsync();
 
             Assert.True(result.IsSuccess);
-            Assert.Equal(AuthError.None, result.Error);
-            Assert.Equal("GoatShop", result.StoreName);
-            Assert.NotNull(result.StoreId);
+        }
 
-            using var context = _db.CreateContext();
-            var store = Assert.Single(context.Stores);
-            var user = Assert.Single(context.Users);
-            Assert.Equal(UserRole.Admin, user.Role);
-            Assert.Equal(store.Id, user.StoreId);
-            Assert.Equal(store.Id, result.StoreId);
+        [Fact]
+        public async Task RegisterAsync_AdminNewStore_ReturnsNoError()
+        {
+            var result = await RegisterAdminAsync();
+
+            Assert.Equal(AuthError.None, result.Error);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_AdminNewStore_ReturnsStoreName()
+        {
+            var result = await RegisterAdminAsync();
+
+            Assert.Equal("GoatShop", result.StoreName);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_AdminNewStore_ReturnsIdOfCreatedStore()
+        {
+            var result = await RegisterAdminAsync();
+
+            Assert.Equal(Query(c => c.Stores.Single().Id), result.StoreId);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_AdminNewStore_CreatesOneStore()
+        {
+            await RegisterAdminAsync();
+
+            Assert.Single(Query(c => c.Stores.ToList()));
+        }
+
+        [Fact]
+        public async Task RegisterAsync_AdminNewStore_CreatesOneUser()
+        {
+            await RegisterAdminAsync();
+
+            Assert.Single(Query(c => c.Users.ToList()));
+        }
+
+        [Fact]
+        public async Task RegisterAsync_AdminNewStore_UserIsAdmin()
+        {
+            await RegisterAdminAsync();
+
+            Assert.Equal(UserRole.Admin, Query(c => c.Users.Single().Role));
+        }
+
+        [Fact]
+        public async Task RegisterAsync_AdminNewStore_UserBelongsToCreatedStore()
+        {
+            await RegisterAdminAsync();
+
+            Assert.Equal(Query(c => c.Stores.Single().Id), Query(c => c.Users.Single().StoreId));
         }
 
         [Theory]
@@ -59,55 +188,111 @@ namespace GoatStore.Core.Tests
         [InlineData("GOATSHOP")]
         public async Task RegisterAsync_AdminExistingStoreName_ReturnsConflict(string storeName)
         {
-            _db.AddStore("GoatShop");
-
-            var result = await CreateService().RegisterAsync(AdminRequest(storeName));
+            var result = await RegisterAdminWithTakenStoreNameAsync(storeName);
 
             Assert.Equal(AuthError.Conflict, result.Error);
-            using var context = _db.CreateContext();
-            Assert.Single(context.Stores);
-            Assert.Empty(context.Users);
+        }
+
+        [Theory]
+        [InlineData("GoatShop")]
+        [InlineData(" goatshop ")]
+        [InlineData("GOATSHOP")]
+        public async Task RegisterAsync_AdminExistingStoreName_DoesNotCreateSecondStore(string storeName)
+        {
+            await RegisterAdminWithTakenStoreNameAsync(storeName);
+
+            Assert.Single(Query(c => c.Stores.ToList()));
+        }
+
+        [Theory]
+        [InlineData("GoatShop")]
+        [InlineData(" goatshop ")]
+        [InlineData("GOATSHOP")]
+        public async Task RegisterAsync_AdminExistingStoreName_DoesNotCreateUser(string storeName)
+        {
+            await RegisterAdminWithTakenStoreNameAsync(storeName);
+
+            Assert.Empty(Query(c => c.Users.ToList()));
         }
 
         [Fact]
         public async Task RegisterAsync_AdminShortStorePassword_ReturnsValidation()
         {
-            var request = AdminRequest();
-            request.StorePassword = "1234567";
-
-            var result = await CreateService().RegisterAsync(request);
+            var result = await RegisterAdminWithShortStorePasswordAsync();
 
             Assert.Equal(AuthError.Validation, result.Error);
-            using var context = _db.CreateContext();
-            Assert.Empty(context.Stores);
         }
 
         [Fact]
-        public async Task RegisterAsync_SellerCorrectStorePassword_JoinsStore()
+        public async Task RegisterAsync_AdminShortStorePassword_DoesNotCreateStore()
         {
-            var store = _db.AddStore("GoatShop", StoreCode);
+            await RegisterAdminWithShortStorePasswordAsync();
 
-            var result = await CreateService().RegisterAsync(SellerRequest());
+            Assert.Empty(Query(c => c.Stores.ToList()));
+        }
+
+        [Fact]
+        public async Task RegisterAsync_SellerCorrectStorePassword_ReturnsSuccess()
+        {
+            var (_, result) = await RegisterSellerIntoExistingStoreAsync();
 
             Assert.True(result.IsSuccess);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_SellerCorrectStorePassword_ReturnsExistingStoreId()
+        {
+            var (store, result) = await RegisterSellerIntoExistingStoreAsync();
+
             Assert.Equal(store.Id, result.StoreId);
-            using var context = _db.CreateContext();
-            Assert.Single(context.Stores);
-            var user = Assert.Single(context.Users);
-            Assert.Equal(UserRole.Seller, user.Role);
-            Assert.Equal(store.Id, user.StoreId);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_SellerCorrectStorePassword_DoesNotCreateNewStore()
+        {
+            await RegisterSellerIntoExistingStoreAsync();
+
+            Assert.Single(Query(c => c.Stores.ToList()));
+        }
+
+        [Fact]
+        public async Task RegisterAsync_SellerCorrectStorePassword_CreatesOneUser()
+        {
+            await RegisterSellerIntoExistingStoreAsync();
+
+            Assert.Single(Query(c => c.Users.ToList()));
+        }
+
+        [Fact]
+        public async Task RegisterAsync_SellerCorrectStorePassword_UserIsSeller()
+        {
+            await RegisterSellerIntoExistingStoreAsync();
+
+            Assert.Equal(UserRole.Seller, Query(c => c.Users.Single().Role));
+        }
+
+        [Fact]
+        public async Task RegisterAsync_SellerCorrectStorePassword_UserBelongsToExistingStore()
+        {
+            var (store, _) = await RegisterSellerIntoExistingStoreAsync();
+
+            Assert.Equal(store.Id, Query(c => c.Users.Single().StoreId));
         }
 
         [Fact]
         public async Task RegisterAsync_SellerWrongStorePassword_ReturnsForbidden()
         {
-            _db.AddStore("GoatShop", StoreCode);
-
-            var result = await CreateService().RegisterAsync(SellerRequest(storePassword: "wrongcode123"));
+            var result = await RegisterSellerWithWrongStorePasswordAsync();
 
             Assert.Equal(AuthError.Forbidden, result.Error);
-            using var context = _db.CreateContext();
-            Assert.Empty(context.Users);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_SellerWrongStorePassword_DoesNotCreateUser()
+        {
+            await RegisterSellerWithWrongStorePasswordAsync();
+
+            Assert.Empty(Query(c => c.Users.ToList()));
         }
 
         [Fact]
@@ -116,6 +301,13 @@ namespace GoatStore.Core.Tests
             var result = await CreateService().RegisterAsync(SellerRequest("Unknown Store"));
 
             Assert.Equal(AuthError.Validation, result.Error);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_SellerUnknownStore_ReturnsStoreNotFoundMessage()
+        {
+            var result = await CreateService().RegisterAsync(SellerRequest("Unknown Store"));
+
             Assert.StartsWith("Магазин не знайдено", result.Message);
         }
 
@@ -198,53 +390,120 @@ namespace GoatStore.Core.Tests
         [Fact]
         public async Task RegisterAsync_DuplicateEmailDifferentCase_ReturnsConflict()
         {
-            await CreateService().RegisterAsync(AdminRequest("Store A", "owner@gmail.com"));
-
-            var result = await CreateService().RegisterAsync(AdminRequest("Store B", "Owner@Gmail.com"));
+            var result = await RegisterDuplicateEmailInOtherCaseAsync();
 
             Assert.Equal(AuthError.Conflict, result.Error);
-            using var context = _db.CreateContext();
-            Assert.Single(context.Users);
-            Assert.Single(context.Stores);
         }
 
         [Fact]
-        public async Task RegisterAsync_Email_StoredLowercaseAndTrimmed()
+        public async Task RegisterAsync_DuplicateEmailDifferentCase_DoesNotCreateSecondUser()
+        {
+            await RegisterDuplicateEmailInOtherCaseAsync();
+
+            Assert.Single(Query(c => c.Users.ToList()));
+        }
+
+        [Fact]
+        public async Task RegisterAsync_DuplicateEmailDifferentCase_DoesNotCreateSecondStore()
+        {
+            await RegisterDuplicateEmailInOtherCaseAsync();
+
+            Assert.Single(Query(c => c.Stores.ToList()));
+        }
+
+        [Fact]
+        public async Task RegisterAsync_EmailWithSpacesAndUppercase_ReturnsNormalizedEmail()
         {
             var result = await CreateService().RegisterAsync(AdminRequest(email: "  Owner@Gmail.COM "));
 
             Assert.Equal("owner@gmail.com", result.Email);
-            using var context = _db.CreateContext();
-            Assert.Equal("owner@gmail.com", context.Users.Single().Email);
         }
 
         [Fact]
-        public async Task RegisterAsync_Passwords_StoredAsBCryptHash()
+        public async Task RegisterAsync_EmailWithSpacesAndUppercase_SavesNormalizedEmail()
         {
-            await CreateService().RegisterAsync(AdminRequest());
+            await CreateService().RegisterAsync(AdminRequest(email: "  Owner@Gmail.COM "));
 
-            using var context = _db.CreateContext();
-            var user = context.Users.Single();
-            var store = context.Stores.Single();
-            Assert.NotEqual("password123", user.PasswordHash);
-            Assert.True(BCrypt.Net.BCrypt.Verify("password123", user.PasswordHash));
-            Assert.NotEqual(StoreCode, store.StorePasswordHash);
-            Assert.True(BCrypt.Net.BCrypt.Verify(StoreCode, store.StorePasswordHash));
+            Assert.Equal("owner@gmail.com", Query(c => c.Users.Single().Email));
         }
 
         [Fact]
-        public async Task LoginAsync_CorrectCredentials_ReturnsUserWithStore()
+        public async Task RegisterAsync_Password_IsNotStoredAsPlainText()
         {
-            var store = _db.AddStore("GoatShop");
-            var user = _db.AddUser(store.Id, "owner@test.com", "password123", UserRole.Admin);
+            await RegisterAdminAsync();
 
-            var result = await CreateService().LoginAsync(new LoginRequestDto { Email = "owner@test.com", Password = "password123" });
+            Assert.NotEqual("password123", Query(c => c.Users.Single().PasswordHash));
+        }
+
+        [Fact]
+        public async Task RegisterAsync_Password_IsStoredAsMatchingBCryptHash()
+        {
+            await RegisterAdminAsync();
+
+            Assert.True(BCrypt.Net.BCrypt.Verify("password123", Query(c => c.Users.Single().PasswordHash)));
+        }
+
+        [Fact]
+        public async Task RegisterAsync_StorePassword_IsNotStoredAsPlainText()
+        {
+            await RegisterAdminAsync();
+
+            Assert.NotEqual(StoreCode, Query(c => c.Stores.Single().StorePasswordHash));
+        }
+
+        [Fact]
+        public async Task RegisterAsync_StorePassword_IsStoredAsMatchingBCryptHash()
+        {
+            await RegisterAdminAsync();
+
+            Assert.True(BCrypt.Net.BCrypt.Verify(StoreCode, Query(c => c.Stores.Single().StorePasswordHash)));
+        }
+
+        [Fact]
+        public async Task LoginAsync_CorrectCredentials_ReturnsSuccess()
+        {
+            var (_, _, result) = await LoginAsOwnerAsync();
 
             Assert.True(result.IsSuccess);
+        }
+
+        [Fact]
+        public async Task LoginAsync_CorrectCredentials_ReturnsUserId()
+        {
+            var (_, user, result) = await LoginAsOwnerAsync();
+
             Assert.Equal(user.Id, result.UserId);
+        }
+
+        [Fact]
+        public async Task LoginAsync_CorrectCredentials_ReturnsEmail()
+        {
+            var (_, _, result) = await LoginAsOwnerAsync();
+
             Assert.Equal("owner@test.com", result.Email);
+        }
+
+        [Fact]
+        public async Task LoginAsync_CorrectCredentials_ReturnsRole()
+        {
+            var (_, _, result) = await LoginAsOwnerAsync();
+
             Assert.Equal(UserRole.Admin, result.Role);
+        }
+
+        [Fact]
+        public async Task LoginAsync_CorrectCredentials_ReturnsStoreId()
+        {
+            var (store, _, result) = await LoginAsOwnerAsync();
+
             Assert.Equal(store.Id, result.StoreId);
+        }
+
+        [Fact]
+        public async Task LoginAsync_CorrectCredentials_ReturnsStoreName()
+        {
+            var (_, _, result) = await LoginAsOwnerAsync();
+
             Assert.Equal("GoatShop", result.StoreName);
         }
 
@@ -260,28 +519,42 @@ namespace GoatStore.Core.Tests
         }
 
         [Fact]
-        public async Task LoginAsync_WrongPassword_ReturnsUnauthorized()
+        public async Task LoginAsync_WrongPassword_IsNotSuccessful()
         {
-            var store = _db.AddStore();
-            _db.AddUser(store.Id, "owner@test.com", "password123");
-
-            var result = await CreateService().LoginAsync(new LoginRequestDto { Email = "owner@test.com", Password = "wrongpass123" });
+            var result = await LoginWithWrongPasswordAsync();
 
             Assert.False(result.IsSuccess);
+        }
+
+        [Fact]
+        public async Task LoginAsync_WrongPassword_ReturnsUnauthorized()
+        {
+            var result = await LoginWithWrongPasswordAsync();
+
             Assert.Equal(AuthError.Unauthorized, result.Error);
+        }
+
+        [Fact]
+        public async Task LoginAsync_WrongPassword_ReturnsNoUserId()
+        {
+            var result = await LoginWithWrongPasswordAsync();
+
             Assert.Null(result.UserId);
         }
 
         [Fact]
-        public async Task LoginAsync_UnknownEmail_ReturnsSameResponseAsWrongPassword()
+        public async Task LoginAsync_UnknownEmail_ReturnsSameErrorAsWrongPassword()
         {
-            var store = _db.AddStore();
-            _db.AddUser(store.Id, "owner@test.com", "password123");
-
-            var wrongPassword = await CreateService().LoginAsync(new LoginRequestDto { Email = "owner@test.com", Password = "wrongpass123" });
-            var unknownEmail = await CreateService().LoginAsync(new LoginRequestDto { Email = "nobody@test.com", Password = "wrongpass123" });
+            var (wrongPassword, unknownEmail) = await LoginWithWrongPasswordAndUnknownEmailAsync();
 
             Assert.Equal(wrongPassword.Error, unknownEmail.Error);
+        }
+
+        [Fact]
+        public async Task LoginAsync_UnknownEmail_ReturnsSameMessageAsWrongPassword()
+        {
+            var (wrongPassword, unknownEmail) = await LoginWithWrongPasswordAndUnknownEmailAsync();
+
             Assert.Equal(wrongPassword.Message, unknownEmail.Message);
         }
 
@@ -299,29 +572,57 @@ namespace GoatStore.Core.Tests
         [Fact]
         public async Task RegisterAsync_EmailTakenByParallelRequest_ReturnsConflict()
         {
-            var store = _db.AddStore("GoatShop", StoreCode);
-            var interceptor = new BeforeSaveInterceptor(() => _db.AddUser(store.Id, "seller@test.com"));
-
-            var result = await new AuthService(_db.CreateContext(interceptor)).RegisterAsync(SellerRequest());
+            var result = await RegisterSellerWhileParallelRequestTakesEmailAsync();
 
             Assert.Equal(AuthError.Conflict, result.Error);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_EmailTakenByParallelRequest_ReturnsEmailTakenMessage()
+        {
+            var result = await RegisterSellerWhileParallelRequestTakesEmailAsync();
+
             Assert.Equal("Користувач із таким Email вже існує.", result.Message);
-            using var context = _db.CreateContext();
-            Assert.Single(context.Users);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_EmailTakenByParallelRequest_KeepsOnlyFirstUser()
+        {
+            await RegisterSellerWhileParallelRequestTakesEmailAsync();
+
+            Assert.Single(Query(c => c.Users.ToList()));
         }
 
         [Fact]
         public async Task RegisterAsync_StoreNameTakenByParallelRequest_ReturnsConflict()
         {
-            var interceptor = new BeforeSaveInterceptor(() => _db.AddStore("GoatShop"));
-
-            var result = await new AuthService(_db.CreateContext(interceptor)).RegisterAsync(AdminRequest());
+            var result = await RegisterAdminWhileParallelRequestTakesStoreNameAsync();
 
             Assert.Equal(AuthError.Conflict, result.Error);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_StoreNameTakenByParallelRequest_ReturnsStoreNameTakenMessage()
+        {
+            var result = await RegisterAdminWhileParallelRequestTakesStoreNameAsync();
+
             Assert.StartsWith("Магазин із такою назвою вже існує", result.Message);
-            using var context = _db.CreateContext();
-            Assert.Single(context.Stores);
-            Assert.Empty(context.Users);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_StoreNameTakenByParallelRequest_KeepsOnlyFirstStore()
+        {
+            await RegisterAdminWhileParallelRequestTakesStoreNameAsync();
+
+            Assert.Single(Query(c => c.Stores.ToList()));
+        }
+
+        [Fact]
+        public async Task RegisterAsync_StoreNameTakenByParallelRequest_DoesNotCreateUser()
+        {
+            await RegisterAdminWhileParallelRequestTakesStoreNameAsync();
+
+            Assert.Empty(Query(c => c.Users.ToList()));
         }
 
         [Fact]
@@ -334,16 +635,34 @@ namespace GoatStore.Core.Tests
         }
 
         [Fact]
-        public async Task GetUserAsync_ExistingUser_ReturnsUserWithStore()
+        public async Task GetUserAsync_ExistingUser_ReturnsSuccess()
         {
-            var store = _db.AddStore("GoatShop");
-            var user = _db.AddUser(store.Id, "seller@test.com");
-
-            var result = await CreateService().GetUserAsync(user.Id);
+            var result = await GetExistingSellerAsync();
 
             Assert.True(result.IsSuccess);
+        }
+
+        [Fact]
+        public async Task GetUserAsync_ExistingUser_ReturnsEmail()
+        {
+            var result = await GetExistingSellerAsync();
+
             Assert.Equal("seller@test.com", result.Email);
+        }
+
+        [Fact]
+        public async Task GetUserAsync_ExistingUser_ReturnsRole()
+        {
+            var result = await GetExistingSellerAsync();
+
             Assert.Equal(UserRole.Seller, result.Role);
+        }
+
+        [Fact]
+        public async Task GetUserAsync_ExistingUser_ReturnsStoreName()
+        {
+            var result = await GetExistingSellerAsync();
+
             Assert.Equal("GoatShop", result.StoreName);
         }
 
@@ -353,6 +672,13 @@ namespace GoatStore.Core.Tests
             var result = await CreateService().GetUserAsync(Guid.NewGuid());
 
             Assert.Equal(AuthError.Unauthorized, result.Error);
+        }
+
+        [Fact]
+        public async Task GetUserAsync_UnknownId_ReturnsSessionInvalidMessage()
+        {
+            var result = await CreateService().GetUserAsync(Guid.NewGuid());
+
             Assert.StartsWith("Сесія недійсна", result.Message);
         }
     }

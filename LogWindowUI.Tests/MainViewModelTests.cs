@@ -268,7 +268,22 @@ namespace LogWindowUI.Tests
         [InlineData(nameof(MainViewModel.CashRegister))]
         [InlineData(nameof(MainViewModel.ReceiptNumber))]
         [InlineData(nameof(MainViewModel.SearchText))]
-        public void TextProperty_Set_UpdatesValueAndFiresPropertyChanged(string property)
+        public void TextProperty_Set_UpdatesValue(string property)
+        {
+            var viewModel = new MainViewModel();
+
+            typeof(MainViewModel).GetProperty(property)!.SetValue(viewModel, "нове значення");
+
+            Assert.Equal("нове значення", typeof(MainViewModel).GetProperty(property)!.GetValue(viewModel));
+        }
+
+        [Theory]
+        [InlineData(nameof(MainViewModel.ShiftInfo))]
+        [InlineData(nameof(MainViewModel.StoreLocation))]
+        [InlineData(nameof(MainViewModel.CashRegister))]
+        [InlineData(nameof(MainViewModel.ReceiptNumber))]
+        [InlineData(nameof(MainViewModel.SearchText))]
+        public void TextProperty_Set_FiresPropertyChanged(string property)
         {
             var viewModel = new MainViewModel();
             string? firedFor = null;
@@ -276,24 +291,44 @@ namespace LogWindowUI.Tests
 
             typeof(MainViewModel).GetProperty(property)!.SetValue(viewModel, "нове значення");
 
-            Assert.Equal("нове значення", typeof(MainViewModel).GetProperty(property)!.GetValue(viewModel));
             Assert.Equal(property, firedFor);
         }
 
-        [Fact]
-        public void TotalsText_ShowsFormattedAmounts()
+        private static MainViewModel CartWithDiscount()
         {
-            var viewModel = new MainViewModel();
-            viewModel.ClearCartCommand.Execute(null);
-            viewModel.CartItems.Add(new CartItemViewModel { UnitPrice = 300m, Quantity = 2 });
-            viewModel.CartItems = viewModel.CartItems;
+            var viewModel = CreateViewModel((300m, 2));
             viewModel.Discount = 100m;
+            return viewModel;
+        }
 
-            Assert.Equal("2 товари", viewModel.TotalItemsCountText);
-            Assert.Equal("600 ₴", viewModel.SubtotalText);
-            Assert.Equal("-100 ₴", viewModel.DiscountText);
-            Assert.Equal("500 ₴", viewModel.TotalPayableText);
-            Assert.Equal("600 ₴", viewModel.CartItems[0].TotalPriceText);
+        [Fact]
+        public void TotalItemsCountText_ShowsCountWithWord()
+        {
+            Assert.Equal("2 товари", CartWithDiscount().TotalItemsCountText);
+        }
+
+        [Fact]
+        public void SubtotalText_ShowsAmountInHryvnias()
+        {
+            Assert.Equal("600 ₴", CartWithDiscount().SubtotalText);
+        }
+
+        [Fact]
+        public void DiscountText_ShowsAmountWithMinus()
+        {
+            Assert.Equal("-100 ₴", CartWithDiscount().DiscountText);
+        }
+
+        [Fact]
+        public void TotalPayableText_ShowsSubtotalMinusDiscount()
+        {
+            Assert.Equal("500 ₴", CartWithDiscount().TotalPayableText);
+        }
+
+        [Fact]
+        public void CartItemTotalPriceText_ShowsPriceTimesQuantity()
+        {
+            Assert.Equal("600 ₴", CartWithDiscount().CartItems[0].TotalPriceText);
         }
     }
 }
