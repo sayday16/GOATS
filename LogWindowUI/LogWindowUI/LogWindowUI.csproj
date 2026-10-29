@@ -9,6 +9,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\GoatStore.API.Tests\GoatStore.API.Tests.csproj" />
+		<ProjectReference Include="..\..\GoatStore.API\GoatStore.API.AppHost\GoatStore.API.AppHost.csproj" />
+		<ProjectReference Include="..\..\GoatStore.API\GoatStore.API.Server\GoatStore.API.Server.csproj" />
 		<ProjectReference Include="..\..\GoatStore.Core\GoatStore.Core.csproj" />
 		<ProjectReference Include="..\..\GoatStore.DataAccess\GoatStore.DataAccess.csproj" />
 	</ItemGroup>
