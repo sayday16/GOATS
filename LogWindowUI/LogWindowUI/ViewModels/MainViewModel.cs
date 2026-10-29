@@ -64,10 +64,32 @@ namespace LogWindowUI.ViewModels
             get => _cartItems;
             set
             {
-                _cartItems = value;
+                _cartItems.CollectionChanged -= CartItems_CollectionChanged;
+                foreach (var item in _cartItems) item.PropertyChanged -= CartItem_PropertyChanged;
+
+                _cartItems = value ?? new ObservableCollection<CartItemViewModel>();
+
+                _cartItems.CollectionChanged += CartItems_CollectionChanged;
+                foreach (var item in _cartItems) item.PropertyChanged += CartItem_PropertyChanged;
+
                 OnPropertyChanged();
                 RecalculateTotals();
             }
+        }
+
+        private void CartItems_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+                foreach (CartItemViewModel item in e.OldItems) item.PropertyChanged -= CartItem_PropertyChanged;
+            if (e.NewItems != null)
+                foreach (CartItemViewModel item in e.NewItems) item.PropertyChanged += CartItem_PropertyChanged;
+            RecalculateTotals();
+        }
+
+        private void CartItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(CartItemViewModel.Quantity) or nameof(CartItemViewModel.TotalPrice))
+                RecalculateTotals();
         }
 
         public string CashierName
@@ -135,7 +157,14 @@ namespace LogWindowUI.ViewModels
         }
 
         public int TotalItemsCount => CartItems.Sum(i => i.Quantity);
-        public string TotalItemsCountText => $"{TotalItemsCount} товарів";
+        public string TotalItemsCountText => $"{TotalItemsCount} {Pluralize(TotalItemsCount, "товар", "товари", "товарів")}";
+        private static string Pluralize(int n, string one, string few, string many)
+        {
+            if (n % 100 is >= 11 and <= 14) return many;
+            return (n % 10) switch { 1 => one, 2 or 3 or 4 => few, _ => many };
+        }
+
+        private static string Capitalize(string s) => char.ToUpper(s[0]) + s.Substring(1);
 
         public decimal Subtotal => CartItems.Sum(i => i.TotalPrice);
         public string SubtotalText => $"{Subtotal:N0} ₴";
@@ -145,7 +174,7 @@ namespace LogWindowUI.ViewModels
             get => _discount;
             set
             {
-                _discount = value;
+                _discount = Math.Max(0m, value);
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(DiscountText));
                 OnPropertyChanged(nameof(TotalPayable));
@@ -153,7 +182,7 @@ namespace LogWindowUI.ViewModels
             }
         }
 
-        public string DiscountText => $"-{Discount:N0} ₴";
+        public string DiscountText => Discount > 0 ? $"-{Discount:N0} ₴" : "0 ₴";
 
         public decimal TotalPayable => Math.Max(0, Subtotal - Discount);
         public string TotalPayableText => $"{TotalPayable:N0} ₴";
@@ -174,22 +203,16 @@ namespace LogWindowUI.ViewModels
         {
             if (authResponse != null && !string.IsNullOrWhiteSpace(authResponse.Email))
             {
-                var emailPrefix = authResponse.Email.Split('@')[0];
-                var nameParts = emailPrefix.Split('.');
-                if (nameParts.Length >= 2)
-                {
-                    CashierName = $"{char.ToUpper(nameParts[0][0])}{nameParts[0].Substring(1)} {char.ToUpper(nameParts[1][0])}{nameParts[1].Substring(1)}";
-                }
-                else
-                {
-                    CashierName = char.ToUpper(emailPrefix[0]) + emailPrefix.Substring(1);
-                }
-
-                if (!string.IsNullOrWhiteSpace(authResponse.StoreName))
-                {
-                    StoreLocation = authResponse.StoreName;
-                }
+                var emailPrefix = authResponse.Email.Trim().Split('@')[0];
+                var parts = emailPrefix.Split('.', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length >= 2)
+                    CashierName = $"{Capitalize(parts[0])} {Capitalize(parts[1])}";
+                else if (parts.Length == 1)
+                    CashierName = Capitalize(parts[0]);
             }
+
+            if (authResponse != null && !string.IsNullOrWhiteSpace(authResponse.StoreName))
+                StoreLocation = authResponse.StoreName;
 
             IncreaseQuantityCommand = new RelayCommand(p =>
             {
@@ -314,6 +337,7 @@ namespace LogWindowUI.ViewModels
 
         private void RecalculateTotals()
         {
+            if (CartItems.Count == 0 && Discount != 0m) Discount = 0m;
             OnPropertyChanged(nameof(TotalItemsCount));
             OnPropertyChanged(nameof(TotalItemsCountText));
             OnPropertyChanged(nameof(Subtotal));
