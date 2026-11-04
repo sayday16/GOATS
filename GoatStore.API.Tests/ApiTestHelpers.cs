@@ -51,7 +51,7 @@ public static class ApiTestHelpers
 
     public static async Task<string> CreateProductAsync(this HttpClient client, string title = "Test Product")
     {
-        var response = await client.PostAsJsonAsync("/api/products", new { Title = title, PurchasePrice = 50m, SalePrice = 100m });
+        var response = await client.PostAsJsonAsync("/api/products", new { Title = title, Brand = "Test Brand", Size = "M", Category = "Одяг", PurchasePrice = 50m, SalePrice = 100m });
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<JsonObject>();
