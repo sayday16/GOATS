@@ -23,11 +23,18 @@ namespace LogWindowUI.Tests
         }
 
         [Fact]
-        public void DefaultConstructor_CreatesCommands()
+        public void DefaultConstructor_CreatesLoginCommand()
         {
             var viewModel = new LoginViewModel();
 
             Assert.NotNull(viewModel.LoginCommand);
+        }
+
+        [Fact]
+        public void DefaultConstructor_CreatesGoToRegisterCommand()
+        {
+            var viewModel = new LoginViewModel();
+
             Assert.NotNull(viewModel.GoToRegisterCommand);
         }
 
@@ -46,7 +53,27 @@ namespace LogWindowUI.Tests
             viewModel.LoginCommand.Execute(null);
 
             Assert.Equal("Невірний Email або пароль.", viewModel.ErrorMessage);
+        }
+
+        [Fact]
+        public void LoginCommand_ServiceReturnsError_SetsHasError()
+        {
+            _authService.Response = new() { IsSuccess = false, Message = "Невірний Email або пароль." };
+            var viewModel = CreateViewModel();
+
+            viewModel.LoginCommand.Execute(null);
+
             Assert.True(viewModel.HasError);
+        }
+
+        [Fact]
+        public void LoginCommand_ServiceReturnsError_CanExecuteAgain()
+        {
+            _authService.Response = new() { IsSuccess = false, Message = "Невірний Email або пароль." };
+            var viewModel = CreateViewModel();
+
+            viewModel.LoginCommand.Execute(null);
+
             Assert.True(viewModel.LoginCommand.CanExecute(null));
         }
 
@@ -59,6 +86,16 @@ namespace LogWindowUI.Tests
             viewModel.LoginCommand.Execute(null);
 
             Assert.StartsWith("Не вдалося зв'язатися із сервером", viewModel.ErrorMessage);
+        }
+
+        [Fact]
+        public void LoginCommand_ServiceThrows_SetsHasError()
+        {
+            _authService.Exception = new HttpRequestException("Connection refused");
+            var viewModel = CreateViewModel();
+
+            viewModel.LoginCommand.Execute(null);
+
             Assert.True(viewModel.HasError);
         }
 
@@ -73,6 +110,17 @@ namespace LogWindowUI.Tests
             _authService.Pending.SetResult(new() { IsSuccess = false, Message = "Невірний Email або пароль." });
 
             Assert.False(canExecuteWhileBusy);
+        }
+
+        [Fact]
+        public void LoginCommand_AfterRequestCompletes_CanExecuteAgain()
+        {
+            _authService.Pending = new();
+            var viewModel = CreateViewModel();
+
+            viewModel.LoginCommand.Execute(null);
+            _authService.Pending.SetResult(new() { IsSuccess = false, Message = "Невірний Email або пароль." });
+
             Assert.True(viewModel.LoginCommand.CanExecute(null));
         }
 
@@ -84,21 +132,30 @@ namespace LogWindowUI.Tests
             viewModel.ErrorMessage = "Стара помилка";
 
             viewModel.LoginCommand.Execute(null);
-
-            Assert.False(viewModel.HasError);
+            var hasErrorWhileBusy = viewModel.HasError;
             _authService.Pending.SetResult(new() { IsSuccess = false, Message = "Помилка." });
+
+            Assert.False(hasErrorWhileBusy);
         }
 
         [Fact]
-        public void LoginCommand_SendsEnteredEmailAndPassword()
+        public void LoginCommand_SendsEnteredEmail()
         {
             var viewModel = CreateViewModel("owner@test.com", "secret123");
 
             viewModel.LoginCommand.Execute(null);
 
-            Assert.NotNull(_authService.LastLogin);
-            Assert.Equal("owner@test.com", _authService.LastLogin.Email);
-            Assert.Equal("secret123", _authService.LastLogin.Password);
+            Assert.Equal("owner@test.com", _authService.LastLogin?.Email);
+        }
+
+        [Fact]
+        public void LoginCommand_SendsEnteredPassword()
+        {
+            var viewModel = CreateViewModel("owner@test.com", "secret123");
+
+            viewModel.LoginCommand.Execute(null);
+
+            Assert.Equal("secret123", _authService.LastLogin?.Password);
         }
     }
 }
