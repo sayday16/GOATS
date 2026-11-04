@@ -191,4 +191,67 @@ public class GoatStoreDbContextTests
 
         Assert.Equal("Sold", storedStatus);
     }
+
+    [Fact]
+    public async Task ProductCondition_IsStoredAsString()
+    {
+        using var context = TestDb.CreateInMemoryContext();
+
+        var store = new Store { Name = "Condition Shop", NormalizedName = "condition shop" };
+        context.Stores.Add(store);
+        context.Products.Add(new Product { Title = "Vintage Jacket", Condition = ProductCondition.Used, Store = store });
+        await context.SaveChangesAsync();
+
+        var storedCondition = await context.Database
+            .SqlQueryRaw<string>("SELECT \"Condition\" AS \"Value\" FROM \"Products\"")
+            .SingleAsync();
+
+        Assert.Equal("Used", storedCondition);
+    }
+
+    [Fact]
+    public async Task AddProduct_DuplicateSkuInSameStore_ThrowsDbUpdateException()
+    {
+        using var context = TestDb.CreateInMemoryContext();
+
+        var store = new Store { Name = "Sku Shop", NormalizedName = "sku shop" };
+        context.Stores.Add(store);
+        context.Products.Add(new Product { Title = "First", Sku = "GST-001", Store = store });
+        await context.SaveChangesAsync();
+
+        context.Products.Add(new Product { Title = "Second", Sku = "GST-001", StoreId = store.Id });
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+    }
+
+    [Fact]
+    public async Task AddProduct_SameSkuInDifferentStores_IsAllowed()
+    {
+        using var context = TestDb.CreateInMemoryContext();
+
+        var storeA = new Store { Name = "Shop A", NormalizedName = "shop a" };
+        var storeB = new Store { Name = "Shop B", NormalizedName = "shop b" };
+        context.Stores.AddRange(storeA, storeB);
+        context.Products.Add(new Product { Title = "First", Sku = "GST-001", Store = storeA });
+        context.Products.Add(new Product { Title = "Second", Sku = "GST-001", Store = storeB });
+
+        var exception = await Record.ExceptionAsync(() => context.SaveChangesAsync());
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public async Task AddProduct_SeveralWithoutSkuInSameStore_IsAllowed()
+    {
+        using var context = TestDb.CreateInMemoryContext();
+
+        var store = new Store { Name = "No Sku Shop", NormalizedName = "no sku shop" };
+        context.Stores.Add(store);
+        context.Products.Add(new Product { Title = "First", Store = store });
+        context.Products.Add(new Product { Title = "Second", Store = store });
+
+        var exception = await Record.ExceptionAsync(() => context.SaveChangesAsync());
+
+        Assert.Null(exception);
+    }
 }
