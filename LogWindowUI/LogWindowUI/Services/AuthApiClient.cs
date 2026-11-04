@@ -58,7 +58,8 @@ namespace LogWindowUI.Services
             {
             }
 
-            if (body is not null)
+            // Помилка без нашого повідомлення (наприклад, ProblemDetails на 500) інакше показала б порожній текст
+            if (body is not null && (response.IsSuccessStatusCode || !string.IsNullOrWhiteSpace(body.Message)))
                 return body;
 
             return new AuthResponseDto

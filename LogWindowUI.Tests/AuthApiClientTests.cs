@@ -74,6 +74,22 @@ namespace LogWindowUI.Tests
         }
 
         [Fact]
+        public async Task LoginAsync_ServerErrorWithProblemDetails_ReturnsMessageByStatus()
+        {
+            var handler = new FakeHttpHandler(() => new HttpResponseMessage(HttpStatusCode.InternalServerError)
+            {
+                Content = new StringContent(
+                    """{"title":"An error occurred while processing your request.","status":500}""",
+                    System.Text.Encoding.UTF8,
+                    "application/problem+json")
+            });
+
+            var result = await new AuthApiClient(handler.CreateClient()).LoginAsync(Login);
+
+            Assert.Equal("Сервер повернув неочікувану відповідь (500).", result.Message);
+        }
+
+        [Fact]
         public async Task LoginAsync_ServerUnreachable_Throws()
         {
             var handler = FakeHttpHandler.Throws(new HttpRequestException("Connection refused"));
