@@ -6,18 +6,45 @@ namespace GoatStore.Core.DTOs
     public class SaveProductRequestDto
     {
         public string Title { get; set; } = string.Empty;
+        public string Brand { get; set; } = string.Empty;
+        public string Size { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public ProductCondition Condition { get; set; } = ProductCondition.New;
+        public string? Sku { get; set; }
         public decimal PurchasePrice { get; set; }
         public decimal SalePrice { get; set; }
+    }
+
+    public class ProductFilterDto
+    {
+        // Шукає в назві, бренді й артикулі без урахування регістру
+        public string? Search { get; set; }
+        public string? Category { get; set; }
+        public string? Brand { get; set; }
+        public ProductStatus? Status { get; set; }
     }
 
     public class ProductDto
     {
         public Guid Id { get; set; }
         public string Title { get; set; } = string.Empty;
+        public string Brand { get; set; } = string.Empty;
+        public string Size { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public ProductCondition Condition { get; set; }
+        public string? Sku { get; set; }
         public decimal PurchasePrice { get; set; }
         public decimal SalePrice { get; set; }
         public ProductStatus Status { get; set; }
+        public DateTime CreatedAt { get; set; }
         public DateTime? SoldDate { get; set; }
+    }
+
+    // Значення для випадаючих списків фільтрів на складі
+    public class ProductFilterOptionsDto
+    {
+        public IReadOnlyList<string> Categories { get; set; } = [];
+        public IReadOnlyList<string> Brands { get; set; } = [];
     }
 
     public enum ProductError

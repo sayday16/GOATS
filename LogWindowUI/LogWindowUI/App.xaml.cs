@@ -19,6 +19,8 @@ namespace LogWindowUI
 
         public static IAuthService CreateAuthService() => new AuthApiClient(ApiHttpClient);
 
+        public static IProductApiClient CreateProductApiClient() => new ProductApiClient(ApiHttpClient);
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);

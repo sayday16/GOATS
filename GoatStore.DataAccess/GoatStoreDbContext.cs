@@ -30,13 +30,24 @@ namespace GoatStore.DataAccess
                 .Property(u => u.Role)
                 .HasConversion<string>();
 
-            modelBuilder.Entity<Product>()
-                .Property(p => p.Id)
-                .ValueGeneratedOnAdd();
+            modelBuilder.Entity<Product>(entity =>
+            {
+                entity.Property(p => p.Id).ValueGeneratedOnAdd();
+                entity.Property(p => p.Status).HasConversion<string>();
+                entity.Property(p => p.Condition).HasConversion<string>().HasMaxLength(20);
 
-            modelBuilder.Entity<Product>()
-                .Property(p => p.Status)
-                .HasConversion<string>();
+                entity.Property(p => p.Title).HasMaxLength(200);
+                entity.Property(p => p.Brand).HasMaxLength(100);
+                entity.Property(p => p.Size).HasMaxLength(30);
+                entity.Property(p => p.Category).HasMaxLength(100);
+                entity.Property(p => p.Sku).HasMaxLength(50);
+
+                entity.HasIndex(p => new { p.StoreId, p.Sku })
+                    .IsUnique()
+                    .HasFilter("\"Sku\" IS NOT NULL");
+
+                entity.HasIndex(p => new { p.StoreId, p.Status });
+            });
 
             modelBuilder.Entity<Store>(entity =>
             {

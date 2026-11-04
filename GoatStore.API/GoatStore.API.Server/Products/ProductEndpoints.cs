@@ -12,9 +12,17 @@ namespace GoatStore.API.Server.Products
         {
             var products = app.MapGroup("/api/products").RequireAuthorization();
 
-            products.MapGet("/", async (ProductStatus? status, ClaimsPrincipal user, IProductService productService, CancellationToken cancellationToken) =>
+            products.MapGet("/", async (string? search, string? category, string? brand, ProductStatus? status,
+                    ClaimsPrincipal user, IProductService productService, CancellationToken cancellationToken) =>
                 TryGetStoreId(user, out var storeId)
-                    ? Results.Ok(await productService.GetAllAsync(storeId, status, cancellationToken))
+                    ? Results.Ok(await productService.GetAllAsync(storeId,
+                        new ProductFilterDto { Search = search, Category = category, Brand = brand, Status = status },
+                        cancellationToken))
+                    : Results.Unauthorized());
+
+            products.MapGet("/filters", async (ClaimsPrincipal user, IProductService productService, CancellationToken cancellationToken) =>
+                TryGetStoreId(user, out var storeId)
+                    ? Results.Ok(await productService.GetFilterOptionsAsync(storeId, cancellationToken))
                     : Results.Unauthorized());
 
             products.MapGet("/{id:guid}", async (Guid id, ClaimsPrincipal user, IProductService productService, CancellationToken cancellationToken) =>

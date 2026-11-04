@@ -34,7 +34,7 @@ public class ProductEndpointsTests : IClassFixture<TestApplicationFactory>
         var token = await _client.RegisterAndLoginAsync(ApiTestHelpers.UniqueEmail("seller"), ApiTestHelpers.SellerRole, storeName);
         _client.UseToken(token);
 
-        var productRequest = new { Title = "Test Product", PurchasePrice = 50m, SalePrice = 100m };
+        var productRequest = new { Title = "Test Product", Brand = "Test Brand", Size = "M", Category = "Одяг", PurchasePrice = 50m, SalePrice = 100m };
         var response = await _client.PostAsJsonAsync("/api/products", productRequest);
 
         // Саме 403 (роль), а не 400 (валідація)
@@ -47,7 +47,7 @@ public class ProductEndpointsTests : IClassFixture<TestApplicationFactory>
         var token = await _client.RegisterAndLoginAsync(ApiTestHelpers.UniqueEmail("owner"), ApiTestHelpers.OwnerRole, ApiTestHelpers.UniqueStoreName());
         _client.UseToken(token);
 
-        var productRequest = new { Title = "Test Product", PurchasePrice = 50m, SalePrice = 100m };
+        var productRequest = new { Title = "Test Product", Brand = "Test Brand", Size = "M", Category = "Одяг", PurchasePrice = 50m, SalePrice = 100m };
         var response = await _client.PostAsJsonAsync("/api/products", productRequest);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -59,7 +59,7 @@ public class ProductEndpointsTests : IClassFixture<TestApplicationFactory>
         var token = await _client.RegisterAndLoginAsync(ApiTestHelpers.UniqueEmail("owner"), ApiTestHelpers.OwnerRole, ApiTestHelpers.UniqueStoreName());
         _client.UseToken(token);
 
-        var response = await _client.PostAsJsonAsync("/api/products", new { Title = "", PurchasePrice = 50m, SalePrice = 100m });
+        var response = await _client.PostAsJsonAsync("/api/products", new { Title = "", Brand = "Test Brand", Size = "M", Category = "Одяг", PurchasePrice = 50m, SalePrice = 100m });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -72,7 +72,7 @@ public class ProductEndpointsTests : IClassFixture<TestApplicationFactory>
     }
 
     private Task<HttpResponseMessage> UpdateTitleAsync(string productId) =>
-        _client.PutAsJsonAsync($"/api/products/{productId}", new { Title = "Updated", PurchasePrice = 60m, SalePrice = 150m });
+        _client.PutAsJsonAsync($"/api/products/{productId}", new { Title = "Updated", Brand = "Test Brand", Size = "M", Category = "Одяг", PurchasePrice = 60m, SalePrice = 150m });
 
     [Fact]
     public async Task PutProduct_AsOwner_ReturnsOk()

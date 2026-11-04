@@ -15,6 +15,7 @@ namespace GoatStore.Core.Tests
         {
             _connection = new SqliteConnection("DataSource=:memory:");
             _connection.Open();
+            _connection.CreateFunction("lower", (string? value) => value?.ToLowerInvariant());
 
             _options = new DbContextOptionsBuilder<GoatStoreDbContext>()
                 .UseSqlite(_connection)
@@ -45,12 +46,17 @@ namespace GoatStore.Core.Tests
             return store;
         }
 
-        public Product AddProduct(Guid storeId, string title = "Test Product", ProductStatus status = ProductStatus.InStock)
+        public Product AddProduct(Guid storeId, string title = "Test Product", ProductStatus status = ProductStatus.InStock,
+            string brand = "Test Brand", string category = "Одяг", string? sku = null)
         {
             using var context = CreateContext();
             var product = new Product
             {
                 Title = title,
+                Brand = brand,
+                Size = "M",
+                Category = category,
+                Sku = sku,
                 PurchasePrice = 100m,
                 SalePrice = 250m,
                 Status = status,
