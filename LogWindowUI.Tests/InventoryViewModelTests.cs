@@ -14,7 +14,7 @@ namespace LogWindowUI.Tests
         public void Constructor_LoadsProductsFromClient()
         {
             var product = new ProductDto { Id = Guid.NewGuid(), Title = "Nike Air" };
-            _api.ProductsToReturn = new List<ProductDto> { product };
+            _api.Products.Add(product);
 
             var vm = new InventoryViewModel(_api);
 
@@ -24,7 +24,7 @@ namespace LogWindowUI.Tests
         [Fact]
         public void Constructor_LoadsCategoriesWithAllOption()
         {
-            _api.FilterOptionsToReturn = new ProductFilterOptionsDto
+            _api.FilterOptions = new ProductFilterOptionsDto
             {
                 Categories = new List<string> { "Одяг" }
             };
@@ -49,7 +49,7 @@ namespace LogWindowUI.Tests
 
             vm.SearchCommand.Execute(null);
 
-            Assert.Equal("Nike", _api.LastGetAllFilter?.Search);
+            Assert.Equal("Nike", _api.LastFilter?.Search);
         }
 
         [Fact]
@@ -62,7 +62,7 @@ namespace LogWindowUI.Tests
 
             vm.SearchCommand.Execute(null);
 
-            Assert.Null(_api.LastGetAllFilter?.Category);
+            Assert.Null(_api.LastFilter?.Category);
         }
 
         [Fact]
@@ -75,7 +75,7 @@ namespace LogWindowUI.Tests
 
             vm.SearchCommand.Execute(null);
 
-            Assert.Equal("Одяг", _api.LastGetAllFilter?.Category);
+            Assert.Equal("Одяг", _api.LastFilter?.Category);
         }
 
         [Fact]

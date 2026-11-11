@@ -20,19 +20,8 @@
                 <views:InventoryView/>
             </DataTemplate>
 
-            <DataTemplate DataType="{x:Type system:String}"
-                          xmlns:system="clr-namespace:System;assembly=mscorlib">
-                <Border Background="White" CornerRadius="12" Margin="24">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock Text="🛒" FontSize="64" HorizontalAlignment="Center" Margin="0,0,0,16"/>
-                        <TextBlock Text="Каса" FontSize="28" FontWeight="Bold"
-                                   Foreground="#1E3A5F" HorizontalAlignment="Center"/>
-                        <TextBlock Text="Модуль «Каса» розробляє Софія — незабаром тут буде екран продажів."
-                                   FontSize="14" Foreground="#8B92A1" HorizontalAlignment="Center"
-                                   Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="400"
-                                   TextAlignment="Center"/>
-                    </StackPanel>
-                </Border>
+            <DataTemplate DataType="{x:Type vm:MainViewModel}">
+                <views:PosView/>
             </DataTemplate>
         </ResourceDictionary>
     </Window.Resources>

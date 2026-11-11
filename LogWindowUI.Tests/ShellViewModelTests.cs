@@ -62,6 +62,16 @@ namespace LogWindowUI.Tests
         }
 
         [Fact]
+        public void ShowPosCommand_SetsCurrentViewToMainViewModel()
+        {
+            var vm = CreateViewModel();
+
+            vm.ShowPosCommand.Execute(null);
+
+            Assert.IsType<MainViewModel>(vm.CurrentView);
+        }
+
+        [Fact]
         public void ShowInventoryCommand_AfterPos_RestoresInventoryView()
         {
             var vm = CreateViewModel();

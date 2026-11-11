@@ -16,6 +16,7 @@ namespace LogWindowUI.ViewModels
         private bool _isPosActive = false;
 
         private InventoryViewModel? _inventoryViewModel;
+        private MainViewModel? _posViewModel;
 
         public object? CurrentView
         {
@@ -35,8 +36,8 @@ namespace LogWindowUI.ViewModels
             set { _isPosActive = value; OnPropertyChanged(); }
         }
 
-        public string UserEmail => _authResponse?.Email ?? "—";
-        public string UserRole => _authResponse?.Role?.ToString() ?? "—";
+        public string UserEmail => _authResponse?.Email ?? "-";
+        public string UserRole => _authResponse?.Role?.ToString() ?? "-";
         public string StoreName => _authResponse?.StoreName ?? "GOAT Store";
 
         public ICommand ShowInventoryCommand { get; }
@@ -68,7 +69,10 @@ namespace LogWindowUI.ViewModels
         {
             IsInventoryActive = false;
             IsPosActive = true;
-            CurrentView = "POS_PLACEHOLDER";
+            
+            _posViewModel ??= new MainViewModel(_authResponse, _productApiClient, new WpfDialogService());
+
+            CurrentView = _posViewModel;
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
