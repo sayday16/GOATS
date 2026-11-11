@@ -1,0 +1,189 @@
+﻿{
+"Emails": [
+{
+"Input": "ivan.petrenko@gmail.com",
+"Expected": "Ivan Petrenko"
+},
+{
+"Input": "owner@gmail.com",
+"Expected": "Owner"
+},
+{
+"Input": "maria.koval@company.com",
+"Expected": "Maria Koval"
+},
+{
+"Input": "admin@test",
+"Expected": "Admin"
+},
+{
+"Input": "a..b@x.com",
+"Expected": "A B"
+},
+{
+"Input": ".john@x.com",
+"Expected": "John"
+},
+{
+"Input": "john.@x.com",
+"Expected": "John"
+},
+{
+"Input": "ivan.petrenko.jr@x.com",
+"Expected": "Ivan Petrenko"
+}
+],
+"EmailsWithoutName": [
+{
+"Input": "@x.com"
+},
+{
+"Input": "..@x.com"
+},
+{
+"Input": "   "
+}
+],
+"Plurals": [
+{
+"Quantity": 1,
+"Expected": "1 товар"
+},
+{
+"Quantity": 2,
+"Expected": "2 товари"
+},
+{
+"Quantity": 4,
+"Expected": "4 товари"
+},
+{
+"Quantity": 5,
+"Expected": "5 товарів"
+},
+{
+"Quantity": 10,
+"Expected": "10 товарів"
+},
+{
+"Quantity": 11,
+"Expected": "11 товарів"
+},
+{
+"Quantity": 12,
+"Expected": "12 товарів"
+},
+{
+"Quantity": 14,
+"Expected": "14 товарів"
+},
+{
+"Quantity": 15,
+"Expected": "15 товарів"
+},
+{
+"Quantity": 21,
+"Expected": "21 товар"
+},
+{
+"Quantity": 22,
+"Expected": "22 товари"
+},
+{
+"Quantity": 100,
+"Expected": "100 товарів"
+},
+{
+"Quantity": 101,
+"Expected": "101 товар"
+},
+{
+"Quantity": 111,
+"Expected": "111 товарів"
+},
+{
+"Quantity": 114,
+"Expected": "114 товарів"
+}
+],
+"TotalPayable": [
+{
+"Discount": 0,
+"ExpectedPayable": 100.5
+},
+{
+"Discount": 30,
+"ExpectedPayable": 70.5
+},
+{
+"Discount": 100.5,
+"ExpectedPayable": 0
+},
+{
+"Discount": 150,
+"ExpectedPayable": 0
+}
+],
+"SubtotalText": [
+{
+"Price": 1,
+"Quantity": 1,
+"Expected": "1 ₴"
+},
+{
+"Price": 999,
+"Quantity": 1,
+"Expected": "999 ₴"
+},
+{
+"Price": 500,
+"Quantity": 2,
+"Expected": "1,000 ₴"
+},
+{
+"Price": 1234567,
+"Quantity": 1,
+"Expected": "1,234,567 ₴"
+}
+],
+"DiscountText": [
+{
+"Discount": 0,
+"Expected": "0 ₴"
+},
+{
+"Discount": -50,
+"Expected": "0 ₴"
+},
+{
+"Discount": 30,
+"Expected": "-30 ₴"
+},
+{
+"Discount": 1500,
+"Expected": "-1,500 ₴"
+}
+],
+"TotalPayableText": [
+{
+"Price": 1000,
+"Discount": 0,
+"Expected": "1,000 ₴"
+},
+{
+"Price": 1000,
+"Discount": 250,
+"Expected": "750 ₴"
+},
+{
+"Price": 2000,
+"Discount": 500,
+"Expected": "1,500 ₴"
+},
+{
+"Price": 100,
+"Discount": 150,
+"Expected": "0 ₴"
+}
+]
+}

@@ -81,4 +81,45 @@ namespace LogWindowUI.Tests
 
         public void Dispose() => AuthSession.Clear();
     }
+
+
+    public sealed class FakeDialogService : IDialogService
+    {
+        public string? LastMessage { get; private set; }
+
+        public void ShowInfo(string title, string message) => LastMessage = message;
+
+        public void ShowWarning(string title, string message) => LastMessage = message;
+
+        public void ShowError(string title, string message) => LastMessage = message;
+    }
+
+    public sealed class FakeProductApiClient : IProductApiClient
+    {
+        public List<ProductDto> Products { get; } = new();
+
+        public Task<IReadOnlyList<ProductDto>> GetAllAsync(ProductFilterDto? filter = null, CancellationToken cancellationToken = default)
+        {
+            IReadOnlyList<ProductDto> result = Products.ToList();
+            return Task.FromResult(result);
+        }
+
+        public Task<ProductFilterOptionsDto> GetFilterOptionsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ProductFilterOptionsDto());
+
+        public Task<ProductResponseDto> GetAsync(Guid productId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ProductResponseDto { IsSuccess = true });
+
+        public Task<ProductResponseDto> CreateAsync(SaveProductRequestDto request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ProductResponseDto { IsSuccess = true });
+
+        public Task<ProductResponseDto> UpdateAsync(Guid productId, SaveProductRequestDto request, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ProductResponseDto { IsSuccess = true });
+
+        public Task<ProductResponseDto> SellAsync(Guid productId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ProductResponseDto { IsSuccess = true });
+
+        public Task<ProductResponseDto> DeleteAsync(Guid productId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ProductResponseDto { IsSuccess = true });
+    }
 }
