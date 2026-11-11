@@ -101,6 +101,10 @@ namespace LogWindowUI.Tests
         public ProductFilterDto? LastFilter { get; private set; }
         public Dictionary<Guid, string> FailingSales { get; } = new();
         public List<Guid> SoldIds { get; } = new();
+        public ProductFilterOptionsDto FilterOptions { get; set; } = new();
+        public ProductResponseDto CreateResponse { get; set; } = new() { IsSuccess = true };
+        public SaveProductRequestDto? LastCreateRequest { get; private set; }
+        public Guid? LastSellId { get; private set; }
 
         public Task<IReadOnlyList<ProductDto>> GetAllAsync(ProductFilterDto? filter = null, CancellationToken cancellationToken = default)
         {
@@ -113,19 +117,23 @@ namespace LogWindowUI.Tests
         }
 
         public Task<ProductFilterOptionsDto> GetFilterOptionsAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(new ProductFilterOptionsDto());
+            Task.FromResult(FilterOptions);
 
         public Task<ProductResponseDto> GetAsync(Guid productId, CancellationToken cancellationToken = default) =>
             Task.FromResult(new ProductResponseDto { IsSuccess = true });
 
-        public Task<ProductResponseDto> CreateAsync(SaveProductRequestDto request, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new ProductResponseDto { IsSuccess = true });
+        public Task<ProductResponseDto> CreateAsync(SaveProductRequestDto request, CancellationToken cancellationToken = default)
+        {
+            LastCreateRequest = request;
+            return Task.FromResult(CreateResponse);
+        }
 
         public Task<ProductResponseDto> UpdateAsync(Guid productId, SaveProductRequestDto request, CancellationToken cancellationToken = default) =>
             Task.FromResult(new ProductResponseDto { IsSuccess = true });
 
         public Task<ProductResponseDto> SellAsync(Guid productId, CancellationToken cancellationToken = default)
         {
+            LastSellId = productId;
             if (FailingSales.TryGetValue(productId, out var message))
                 return Task.FromResult(new ProductResponseDto { IsSuccess = false, Message = message });
 

@@ -1,0 +1,252 @@
+<UserControl x:Class="LogWindowUI.Views.InventoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:LogWindowUI.ViewModels"
+             Background="#F5F7FA">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Recources/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BoolVis"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <TextBlock Text="Склад" FontSize="26" FontWeight="Bold"
+                           Foreground="#1A1A1A"/>
+                <TextBlock Text="Список товарів вашого магазину"
+                           FontSize="13" Foreground="#8B92A1"/>
+            </StackPanel>
+
+            <Button Grid.Column="1" Content="＋ Додати товар"
+                    Command="{Binding AddProductCommand}"
+                    Style="{StaticResource MainButton}"
+                    Width="160" VerticalAlignment="Center"/>
+        </Grid>
+
+        <Border Grid.Row="1" Background="White" CornerRadius="10"
+                BorderBrush="#E2E8F0" BorderThickness="1"
+                Padding="16,12" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal">
+
+                <TextBox Style="{StaticResource InputStyle}"
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         Tag="🔍  Пошук за назвою, брендом, артикулом…"
+                         Width="300" Margin="0,0,12,0"/>
+
+                <ComboBox ItemsSource="{Binding Categories}"
+                          SelectedItem="{Binding SelectedCategory}"
+                          Width="180" Height="48" Margin="0,0,12,0"
+                          FontSize="14" VerticalContentAlignment="Center"/>
+
+                <Button Content="Знайти" Command="{Binding SearchCommand}"
+                        Style="{StaticResource MainButton}" Width="100" Margin="0,0,8,0"/>
+
+                <Button Content="Скинути" Command="{Binding ResetCommand}"
+                        Height="48" Width="90" FontSize="14"
+                        Background="White" Foreground="#1E3A5F"
+                        BorderBrush="#1E3A5F" BorderThickness="1"
+                        Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="6">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="2" Background="White" CornerRadius="10"
+                BorderBrush="#E2E8F0" BorderThickness="1">
+            <Grid>
+                
+                <Border Background="#80FFFFFF" CornerRadius="10"
+                        Visibility="{Binding IsLoading, Converter={StaticResource BoolVis}}"
+                        Panel.ZIndex="10">
+                    <TextBlock Text="Завантаження…" FontSize="16" Foreground="#1E3A5F"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <Border Background="#FFF0F0" CornerRadius="10"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolVis}}"
+                        Panel.ZIndex="5">
+                    <TextBlock Text="{Binding ErrorMessage}" FontSize="14"
+                               Foreground="#C0392B" HorizontalAlignment="Center"
+                               VerticalAlignment="Center" TextWrapping="Wrap"
+                               Margin="24"/>
+                </Border>
+
+                <DataGrid ItemsSource="{Binding Products}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          CanUserAddRows="False"
+                          GridLinesVisibility="Horizontal"
+                          HorizontalGridLinesBrush="#E2E8F0"
+                          Background="White"
+                          BorderThickness="0"
+                          RowHeight="48"
+                          HeadersVisibility="Column"
+                          SelectionMode="Single"
+                          ColumnHeaderHeight="44">
+
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="White"/>
+                            <Setter Property="Foreground" Value="#8B92A1"/>
+                            <Setter Property="FontSize" Value="12"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="Padding" Value="12,0"/>
+                            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+
+                    <DataGrid.CellStyle>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="Padding" Value="12,0"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="FontSize" Value="14"/>
+                            <Setter Property="Foreground" Value="#1A1A1A"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#EEF2FF"/>
+                                    <Setter Property="Foreground" Value="#1A1A1A"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.CellStyle>
+
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#EEF2FF"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#F7F9FF"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
+
+                    <DataGrid.Columns>
+
+                        <DataGridTemplateColumn Header="Назва / Бренд" Width="2.5*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="12,4" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
+                                                   FontSize="14" Foreground="#1A1A1A"/>
+                                        <TextBlock Text="{Binding Brand}" FontSize="12"
+                                                   Foreground="#8B92A1"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="Розмір" Binding="{Binding Size}" Width="80"/>
+
+                        <DataGridTextColumn Header="Артикул" Binding="{Binding Sku}" Width="120"/>
+
+                        <DataGridTextColumn Header="Категорія" Binding="{Binding Category}" Width="140"/>
+
+                        <DataGridTextColumn Header="Ціна продажу"
+                                            Binding="{Binding SalePrice, StringFormat={}{0:N2} ₴}"
+                                            Width="130"/>
+
+                        <DataGridTemplateColumn Header="Статус" Width="120">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Margin="8,8" Padding="10,4" CornerRadius="20"
+                                            HorizontalAlignment="Left">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#D4EDDA"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Sold">
+                                                        <Setter Property="Background" Value="#F0F0F0"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock FontSize="12" FontWeight="SemiBold">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="В наявності"/>
+                                                    <Setter Property="Foreground" Value="#155724"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Sold">
+                                                            <Setter Property="Text" Value="Продано"/>
+                                                            <Setter Property="Foreground" Value="#6C757D"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTemplateColumn Header="" Width="110">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="Продати"
+                                            Command="{Binding DataContext.SellCommand,
+                                                RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Height="34" Width="90"
+                                            FontSize="13" Cursor="Hand"
+                                            Background="#1E3A5F" Foreground="White"
+                                            BorderThickness="0">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}"
+                                                        CornerRadius="6">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsEnabled,
+                                                                    RelativeSource={RelativeSource AncestorType=Button}}"
+                                                                    Value="False">
+                                                                    <Setter Property="Opacity" Value="0.35"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

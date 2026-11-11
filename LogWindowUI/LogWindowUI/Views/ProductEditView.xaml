@@ -1,0 +1,158 @@
+<Window x:Class="LogWindowUI.Views.ProductEditView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Додати товар" Height="680" Width="480"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Background="#F5F7FA">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Recources/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BoolVis"/>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Новий товар" FontSize="22" FontWeight="Bold" Foreground="#1A1A1A"/>
+            <TextBlock Text="Заповніть дані про товар для внесення на склад" FontSize="13" Foreground="#8B92A1" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,12">
+            <StackPanel Margin="0,0,12,0">
+
+                <TextBlock Text="Назва *" FontSize="12" FontWeight="SemiBold" Foreground="#1A1A1A" Margin="0,0,0,4"/>
+                <TextBox Style="{StaticResource InputStyle}"
+                         Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
+                         Tag="Наприклад: Худі Oversize Essential"
+                         Margin="0,0,0,12"/>
+
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Бренд *" FontSize="12" FontWeight="SemiBold" Foreground="#1A1A1A" Margin="0,0,0,4"/>
+                        <TextBox Style="{StaticResource InputStyle}"
+                                 Text="{Binding Brand, UpdateSourceTrigger=PropertyChanged}"
+                                 Tag="Nike, Zara..." />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Розмір *" FontSize="12" FontWeight="SemiBold" Foreground="#1A1A1A" Margin="0,0,0,4"/>
+                        <TextBox Style="{StaticResource InputStyle}"
+                                 Text="{Binding Size, UpdateSourceTrigger=PropertyChanged}"
+                                 Tag="M, 42, One size..." />
+                    </StackPanel>
+                </Grid>
+
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Категорія *" FontSize="12" FontWeight="SemiBold" Foreground="#1A1A1A" Margin="0,0,0,4"/>
+                        <ComboBox ItemsSource="{Binding Categories}"
+                                  SelectedItem="{Binding SelectedCategory}"
+                                  Height="48" FontSize="14" VerticalContentAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Стан *" FontSize="12" FontWeight="SemiBold" Foreground="#1A1A1A" Margin="0,0,0,4"/>
+                        <ComboBox ItemsSource="{Binding Conditions}"
+                                  SelectedItem="{Binding SelectedCondition}"
+                                  Height="48" FontSize="14" VerticalContentAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Text="Артикул (необов'язково)" FontSize="12" FontWeight="SemiBold" Foreground="#1A1A1A" Margin="0,0,0,4"/>
+                <TextBox Style="{StaticResource InputStyle}"
+                         Text="{Binding Sku, UpdateSourceTrigger=PropertyChanged}"
+                         Tag="Наприклад: GST-HD04-M"
+                         Margin="0,0,0,12"/>
+
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Ціна закупки (₴) *" FontSize="12" FontWeight="SemiBold" Foreground="#1A1A1A" Margin="0,0,0,4"/>
+                        <TextBox Style="{StaticResource InputStyle}"
+                                 Text="{Binding PurchasePrice, UpdateSourceTrigger=PropertyChanged}"
+                                 Tag="400.00" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Ціна продажу (₴) *" FontSize="12" FontWeight="SemiBold" Foreground="#1A1A1A" Margin="0,0,0,4"/>
+                        <TextBox Style="{StaticResource InputStyle}"
+                                 Text="{Binding SalePrice, UpdateSourceTrigger=PropertyChanged}"
+                                 Tag="1200.00" />
+                    </StackPanel>
+                </Grid>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <TextBlock Grid.Row="2"
+                   Text="{Binding ErrorMessage}"
+                   Foreground="#C0392B"
+                   FontSize="13"
+                   TextWrapping="Wrap"
+                   Visibility="{Binding HasError, Converter={StaticResource BoolVis}}"
+                   Margin="0,0,0,12"/>
+
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0"
+                    Content="Скасувати"
+                    Command="{Binding CancelCommand}"
+                    Height="48"
+                    FontSize="14"
+                    Background="White"
+                    Foreground="#1E3A5F"
+                    BorderBrush="#E2E8F0"
+                    BorderThickness="1"
+                    Cursor="Hand">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+
+            <Button Grid.Column="2"
+                    Content="Зберегти"
+                    Command="{Binding SaveCommand}"
+                    Style="{StaticResource MainButton}"/>
+        </Grid>
+    </Grid>
+</Window>

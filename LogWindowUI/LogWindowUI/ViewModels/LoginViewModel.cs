@@ -90,8 +90,8 @@ namespace LogWindowUI.ViewModels
 
                 if (response.IsSuccess)
                 {
-                    var mainWindow = new MainWindow(response);
-                    mainWindow.Show();
+                    var shellWindow = new Views.ShellWindow(response);
+                    shellWindow.Show();
                     CloseCurrentWindow();
                     _authService.Dispose();
                 }

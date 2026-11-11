@@ -240,7 +240,7 @@
                         </ScrollViewer>
 
                         <Grid Grid.Row="3" Margin="0,16,0,0">
-                            <TextBlock Text="⌨ F2 — пошук · Del — видалити позицію" Foreground="#94A3B8" FontSize="12" VerticalAlignment="Center"/>
+                            <TextBlock Text="⌨ F2 - пошук · Del - видалити позицію" Foreground="#94A3B8" FontSize="12" VerticalAlignment="Center"/>
                             <Button HorizontalAlignment="Right" Background="Transparent" BorderThickness="0" Cursor="Hand" Command="{Binding ClearCartCommand}">
                                 <StackPanel Orientation="Horizontal">
                                     <Path Data="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
@@ -388,7 +388,7 @@
                                         <TextBlock Text="Сформувати чек" Foreground="White" FontWeight="SemiBold" FontSize="15" Margin="10,0,0,0"/>
                                     </StackPanel>
                                 </Button>
-                                <TextBlock Text="ⓘ Enter — підтвердити продаж" Foreground="#94A3B8" FontSize="11" HorizontalAlignment="Center" Margin="0,12,0,0"/>
+                                <TextBlock Text="ⓘ Enter - підтвердити продаж" Foreground="#94A3B8" FontSize="11" HorizontalAlignment="Center" Margin="0,12,0,0"/>
                             </StackPanel>
                         </Grid>
                     </ScrollViewer>
