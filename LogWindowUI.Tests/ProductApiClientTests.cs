@@ -89,11 +89,11 @@ namespace LogWindowUI.Tests
         [Fact]
         public async Task CreateAsync_ConflictWithMessage_ReturnsServerMessage()
         {
-            var handler = Returns(HttpStatusCode.Conflict, new ProductResponseDto { Message = "Товар із таким артикулом уже є в магазині." });
+            var handler = Returns(HttpStatusCode.Conflict, new ProductResponseDto { Message = "Цей артикул уже використано (можливо, у проданого товару). Вкажіть інший." });
 
             var result = await CreateClient(handler).CreateAsync(Request());
 
-            Assert.Equal("Товар із таким артикулом уже є в магазині.", result.Message);
+            Assert.Equal("Цей артикул уже використано (можливо, у проданого товару). Вкажіть інший.", result.Message);
         }
 
         [Fact]

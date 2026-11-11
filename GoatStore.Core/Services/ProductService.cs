@@ -217,7 +217,7 @@ namespace GoatStore.Core.Services
         }
 
         private static ProductResponseDto SkuConflict() =>
-            Fail(ProductError.Conflict, "Товар із таким артикулом уже є в магазині.");
+            Fail(ProductError.Conflict, "Цей артикул уже використано (можливо, у проданого товару). Вкажіть інший.");
 
         private static string? Validate(SaveProductRequestDto request, ProductFields fields)
         {
