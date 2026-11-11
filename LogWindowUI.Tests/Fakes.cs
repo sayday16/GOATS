@@ -97,9 +97,17 @@ namespace LogWindowUI.Tests
     public sealed class FakeProductApiClient : IProductApiClient
     {
         public List<ProductDto> Products { get; } = new();
+        public Exception? GetAllException { get; set; }
+        public ProductFilterDto? LastFilter { get; private set; }
+        public Dictionary<Guid, string> FailingSales { get; } = new();
+        public List<Guid> SoldIds { get; } = new();
 
         public Task<IReadOnlyList<ProductDto>> GetAllAsync(ProductFilterDto? filter = null, CancellationToken cancellationToken = default)
         {
+            LastFilter = filter;
+            if (GetAllException is not null)
+                return Task.FromException<IReadOnlyList<ProductDto>>(GetAllException);
+
             IReadOnlyList<ProductDto> result = Products.ToList();
             return Task.FromResult(result);
         }
@@ -116,8 +124,14 @@ namespace LogWindowUI.Tests
         public Task<ProductResponseDto> UpdateAsync(Guid productId, SaveProductRequestDto request, CancellationToken cancellationToken = default) =>
             Task.FromResult(new ProductResponseDto { IsSuccess = true });
 
-        public Task<ProductResponseDto> SellAsync(Guid productId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new ProductResponseDto { IsSuccess = true });
+        public Task<ProductResponseDto> SellAsync(Guid productId, CancellationToken cancellationToken = default)
+        {
+            if (FailingSales.TryGetValue(productId, out var message))
+                return Task.FromResult(new ProductResponseDto { IsSuccess = false, Message = message });
+
+            SoldIds.Add(productId);
+            return Task.FromResult(new ProductResponseDto { IsSuccess = true, Message = "Товар продано." });
+        }
 
         public Task<ProductResponseDto> DeleteAsync(Guid productId, CancellationToken cancellationToken = default) =>
             Task.FromResult(new ProductResponseDto { IsSuccess = true });
