@@ -31,4 +31,10 @@
     <ProjectReference Include="..\LogWindowUI\LogWindowUI\LogWindowUI.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="test_data.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
