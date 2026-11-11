@@ -83,6 +83,9 @@ namespace LogWindowUI.ViewModels
             LoadFilterOptionsAsync();
         }
 
+        // Товари могли продати на касі, поки склад був відкритий
+        public void Refresh() => LoadProductsAsync();
+
         private async void LoadProductsAsync()
         {
             IsLoading = true;

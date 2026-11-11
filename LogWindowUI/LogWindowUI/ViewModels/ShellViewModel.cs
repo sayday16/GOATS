@@ -61,6 +61,8 @@ namespace LogWindowUI.ViewModels
 
             if (_inventoryViewModel == null)
                 _inventoryViewModel = new InventoryViewModel(_productApiClient);
+            else
+                _inventoryViewModel.Refresh();
 
             CurrentView = _inventoryViewModel;
         }
