@@ -83,6 +83,30 @@ namespace LogWindowUI.Tests
         }
 
         [Fact]
+        public void ShowInventoryCommand_AfterPos_ReusesInventoryViewModel()
+        {
+            var vm = CreateViewModel();
+            var inventory = vm.CurrentView;
+            vm.ShowPosCommand.Execute(null);
+
+            vm.ShowInventoryCommand.Execute(null);
+
+            Assert.Same(inventory, vm.CurrentView);
+        }
+
+        [Fact]
+        public void ShowInventoryCommand_AfterSaleOnPos_ReloadsProducts()
+        {
+            var vm = CreateViewModel();
+            vm.ShowPosCommand.Execute(null);
+            _api.Products.Add(new ProductDto { Id = Guid.NewGuid(), Title = "Levi's 501", Status = ProductStatus.Sold });
+
+            vm.ShowInventoryCommand.Execute(null);
+
+            Assert.Equal(ProductStatus.Sold, Assert.IsType<InventoryViewModel>(vm.CurrentView).Products.Single().Status);
+        }
+
+        [Fact]
         public void UserEmail_ReturnsAuthEmail()
         {
             var vm = CreateViewModel();
