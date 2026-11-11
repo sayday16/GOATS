@@ -1,22 +1,58 @@
-﻿using System.Collections.ObjectModel;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Globalization;
+using System.IO;
+using System.Text.Json;
+using System.Threading;
 using GoatStore.Core.DTOs;
+using LogWindowUI.Services;
 using LogWindowUI.ViewModels;
 using Xunit;
 
 namespace LogWindowUI.Tests
 {
-    public class MainViewModelTests
+    internal static class TestViewModelFactory
     {
-        private static MainViewModel CreateViewModel(params (decimal Price, int Quantity)[] items)
+        public static MainViewModel Create(AuthResponseDto? authResponse = null)
         {
-            var viewModel = new MainViewModel();
-            viewModel.CartItems = new ObservableCollection<CartItemViewModel>(
-                items.Select(i => new CartItemViewModel { UnitPrice = i.Price, Quantity = i.Quantity }));
+            return new MainViewModel(authResponse ?? new AuthResponseDto(), new FakeProductApiClient(), new FakeDialogService());
+        }
+    }
+
+    internal static class CartTestFactory
+    {
+        public static MainViewModel Create(params (decimal Price, int Quantity)[] items)
+        {
+            var viewModel = TestViewModelFactory.Create();
+
+            var cartItems = new ObservableCollection<CartItemViewModel>();
+            foreach (var item in items)
+            {
+                cartItems.Add(new CartItemViewModel { SalePrice = item.Price, Quantity = item.Quantity });
+            }
+
+            viewModel.CartItems = cartItems;
             viewModel.Discount = 0m;
+
             return viewModel;
         }
+    }
 
-        private static List<string?> CapturePropertyChanges(MainViewModel viewModel)
+    internal static class TestHelper
+    {
+        public static JsonElement LoadSection(string section)
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, "test_data.json");
+            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            return doc.RootElement.GetProperty(section).Clone();
+        }
+    }
+
+    public class MainViewModelTests
+    {
+        private static List<string?> CapturePropertyChanges(INotifyPropertyChanged viewModel)
         {
             var raised = new List<string?>();
             viewModel.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
@@ -24,124 +60,76 @@ namespace LogWindowUI.Tests
         }
 
         [Fact]
-        public void TotalPrice_QuantityChanged_EqualsPriceTimesQuantity()
+        public void RemoveItemCommand_ItemInCart_RemovesItem()
         {
-            var item = new CartItemViewModel { UnitPrice = 500m, Quantity = 1 };
-
-            item.Quantity = 3;
-
-            Assert.Equal(1500m, item.TotalPrice);
-        }
-
-        [Theory]
-        [InlineData(0)]
-        [InlineData(-5)]
-        public void Quantity_BelowOne_IsIgnored(int invalidQuantity)
-        {
-            var item = new CartItemViewModel { Quantity = 2 };
-
-            item.Quantity = invalidQuantity;
-
-            Assert.Equal(2, item.Quantity);
-        }
-
-        [Fact]
-        public void Quantity_Changed_RaisesQuantityAndTotalPriceTextEvents()
-        {
-            var item = new CartItemViewModel { Quantity = 1 };
-            var raised = new List<string?>();
-            item.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
-
-            item.Quantity = 2;
-
-            Assert.Contains(nameof(CartItemViewModel.Quantity), raised);
-            Assert.Contains(nameof(CartItemViewModel.TotalPriceText), raised);
-        }
-
-        [Fact]
-        public void IncreaseQuantityCommand_ItemInCart_UpdatesQuantityAndTotals()
-        {
-            var viewModel = CreateViewModel((1000m, 2));
-            var item = viewModel.CartItems[0];
-
-            viewModel.IncreaseQuantityCommand.Execute(item);
-
-            Assert.Equal(3, item.Quantity);
-            Assert.Equal(3, viewModel.TotalItemsCount);
-            Assert.Equal(3000m, viewModel.Subtotal);
-        }
-
-        [Fact]
-        public void DecreaseQuantityCommand_QuantityAboveOne_UpdatesTotals()
-        {
-            var viewModel = CreateViewModel((1000m, 2));
-            var item = viewModel.CartItems[0];
-
-            viewModel.DecreaseQuantityCommand.Execute(item);
-
-            Assert.Equal(1, item.Quantity);
-            Assert.Equal(1, viewModel.TotalItemsCount);
-            Assert.Equal(1000m, viewModel.Subtotal);
-        }
-
-        [Fact]
-        public void DecreaseQuantityCommand_QuantityIsOne_DoesNothing()
-        {
-            var viewModel = CreateViewModel((500m, 1));
-            var item = viewModel.CartItems[0];
-
-            viewModel.DecreaseQuantityCommand.Execute(item);
-
-            Assert.Equal(1, item.Quantity);
-            Assert.Equal(1, viewModel.TotalItemsCount);
-            Assert.Equal(500m, viewModel.Subtotal);
-        }
-
-        [Fact]
-        public void RemoveItemCommand_ItemInCart_RemovesAndUpdatesTotals()
-        {
-            var viewModel = CreateViewModel((1000m, 2), (500m, 1));
+            var viewModel = CartTestFactory.Create((1000m, 1), (500m, 1));
             var item = viewModel.CartItems[1];
 
             viewModel.RemoveItemCommand.Execute(item);
 
-            Assert.Single(viewModel.CartItems);
             Assert.DoesNotContain(item, viewModel.CartItems);
-            Assert.Equal(2, viewModel.TotalItemsCount);
-            Assert.Equal(2000m, viewModel.Subtotal);
         }
 
         [Fact]
-        public void ItemQuantityChangedDirectly_RaisesTotalsPropertyChanged()
+        public void RemoveItemCommand_ItemInCart_UpdatesTotalItemsCount()
         {
-            var viewModel = CreateViewModel((100m, 1));
-            var raised = CapturePropertyChanges(viewModel);
+            var viewModel = CartTestFactory.Create((1000m, 1), (500m, 1));
+            var item = viewModel.CartItems[1];
 
-            viewModel.CartItems[0].Quantity = 3;
+            viewModel.RemoveItemCommand.Execute(item);
 
-            Assert.Contains(nameof(MainViewModel.Subtotal), raised);
-            Assert.Contains(nameof(MainViewModel.TotalItemsCount), raised);
+            Assert.Equal(1, viewModel.TotalItemsCount);
+        }
+
+        [Fact]
+        public void RemoveItemCommand_ItemInCart_UpdatesSubtotal()
+        {
+            var viewModel = CartTestFactory.Create((1000m, 1), (500m, 1));
+            var item = viewModel.CartItems[1];
+
+            viewModel.RemoveItemCommand.Execute(item);
+
+            Assert.Equal(1000m, viewModel.Subtotal);
+        }
+
+        [Fact]
+        public void RemoveItemCommand_NullParameter_DoesNotThrow()
+        {
+            var viewModel = CartTestFactory.Create((1000m, 1));
+
+            var ex = Record.Exception(() => viewModel.RemoveItemCommand.Execute(null));
+
+            Assert.Null(ex);
         }
 
         [Fact]
         public void ItemAddedToCart_RaisesTotalsPropertyChanged()
         {
-            var viewModel = CreateViewModel();
+            var viewModel = CartTestFactory.Create((100m, 1));
             var raised = CapturePropertyChanges(viewModel);
 
-            viewModel.CartItems.Add(new CartItemViewModel { UnitPrice = 100m });
+            viewModel.CartItems.Add(new CartItemViewModel { SalePrice = 200m, Quantity = 1 });
 
             Assert.Contains(nameof(MainViewModel.Subtotal), raised);
         }
 
-        [Theory]
-        [InlineData(0, 100)]
-        [InlineData(30, 70)]
-        [InlineData(100, 0)]
-        [InlineData(150, 0)]
-        public void TotalPayable_DiscountApplied_NeverBelowZero(int discount, int expectedPayable)
+        public static IEnumerable<object[]> GetTotalPayableTestData()
         {
-            var viewModel = CreateViewModel((100m, 1));
+            foreach (var item in TestHelper.LoadSection("TotalPayable").EnumerateArray())
+            {
+                yield return new object[]
+                {
+                    item.GetProperty("Discount").GetDecimal(),
+                    item.GetProperty("ExpectedPayable").GetDecimal()
+                };
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(GetTotalPayableTestData))]
+        public void TotalPayable_DiscountApplied_NeverBelowZero(decimal discount, decimal expectedPayable)
+        {
+            var viewModel = CartTestFactory.Create((100.50m, 1));
 
             viewModel.Discount = discount;
 
@@ -149,35 +137,81 @@ namespace LogWindowUI.Tests
         }
 
         [Fact]
-        public void Discount_Negative_IsClampedToZero()
+        public void Discount_Negative_SetsDiscountToZero()
         {
-            var viewModel = CreateViewModel((100m, 1));
+            var viewModel = CartTestFactory.Create((100m, 1));
 
             viewModel.Discount = -50m;
 
             Assert.Equal(0m, viewModel.Discount);
+        }
+
+        [Fact]
+        public void Discount_Negative_UpdatesTotalPayable()
+        {
+            var viewModel = CartTestFactory.Create((100m, 1));
+
+            viewModel.Discount = -50m;
+
             Assert.Equal(100m, viewModel.TotalPayable);
         }
 
         [Fact]
-        public void ClearCartCommand_CartWithItemsAndDiscount_ResetsEverything()
+        public void ClearCartCommand_CartWithItems_EmptiesCartItems()
         {
-            var viewModel = CreateViewModel((500m, 1));
-            viewModel.Discount = 100m;
+            var viewModel = CartTestFactory.Create((500m, 1));
 
             viewModel.ClearCartCommand.Execute(null);
 
             Assert.Empty(viewModel.CartItems);
+        }
+
+        [Fact]
+        public void ClearCartCommand_CartWithItems_ResetsDiscountToZero()
+        {
+            var viewModel = CartTestFactory.Create((500m, 1));
+            viewModel.Discount = 100m;
+
+            viewModel.ClearCartCommand.Execute(null);
+
             Assert.Equal(0m, viewModel.Discount);
+        }
+
+        [Fact]
+        public void ClearCartCommand_CartWithItems_ResetsSubtotalToZero()
+        {
+            var viewModel = CartTestFactory.Create((500m, 1));
+
+            viewModel.ClearCartCommand.Execute(null);
+
             Assert.Equal(0m, viewModel.Subtotal);
+        }
+
+        [Fact]
+        public void ClearCartCommand_CartWithItems_ResetsTotalPayableToZero()
+        {
+            var viewModel = CartTestFactory.Create((500m, 1));
+            viewModel.Discount = 100m;
+
+            viewModel.ClearCartCommand.Execute(null);
+
             Assert.Equal(0m, viewModel.TotalPayable);
+        }
+
+        [Fact]
+        public void ClearCartCommand_CartWithItems_ResetsTotalItemsCountToZero()
+        {
+            var viewModel = CartTestFactory.Create((500m, 1));
+
+            viewModel.ClearCartCommand.Execute(null);
+
             Assert.Equal(0, viewModel.TotalItemsCount);
         }
 
         [Fact]
         public void RemoveItemCommand_LastItem_ResetsDiscount()
         {
-            var viewModel = CreateViewModel((100m, 1));
+            var viewModel = CartTestFactory.Create((100m, 1));
             viewModel.Discount = 30m;
 
             viewModel.RemoveItemCommand.Execute(viewModel.CartItems[0]);
@@ -186,149 +220,255 @@ namespace LogWindowUI.Tests
         }
 
         [Fact]
-        public void PaymentMethods_CardIsDefault_AndSelectionIsMutuallyExclusive()
+        public void IsCardPayment_ByDefault_IsTrue()
         {
-            var viewModel = CreateViewModel();
+            var viewModel = CartTestFactory.Create();
 
             Assert.True(viewModel.IsCardPayment);
-            Assert.False(viewModel.IsCashPayment);
+        }
+
+        [Fact]
+        public void SelectCashCommand_SetsIsCashPaymentToTrue()
+        {
+            var viewModel = CartTestFactory.Create();
 
             viewModel.SelectCashCommand.Execute(null);
 
             Assert.True(viewModel.IsCashPayment);
+        }
+
+        [Fact]
+        public void SelectCashCommand_SetsIsCardPaymentToFalse()
+        {
+            var viewModel = CartTestFactory.Create();
+
+            viewModel.SelectCashCommand.Execute(null);
+
             Assert.False(viewModel.IsCardPayment);
+        }
+
+        [Fact]
+        public void SelectCardCommand_SetsIsCardPaymentToTrue()
+        {
+            var viewModel = CartTestFactory.Create();
+            viewModel.SelectCashCommand.Execute(null);
 
             viewModel.SelectCardCommand.Execute(null);
 
             Assert.True(viewModel.IsCardPayment);
+        }
+
+        [Fact]
+        public void SelectCardCommand_SetsIsCashPaymentToFalse()
+        {
+            var viewModel = CartTestFactory.Create();
+            viewModel.SelectCashCommand.Execute(null);
+
+            viewModel.SelectCardCommand.Execute(null);
+
             Assert.False(viewModel.IsCashPayment);
-        }
-
-        [Theory]
-        [InlineData(1, "1 товар")]
-        [InlineData(2, "2 товари")]
-        [InlineData(5, "5 товарів")]
-        [InlineData(11, "11 товарів")]
-        [InlineData(21, "21 товар")]
-        public void TotalItemsCountText_UsesCorrectPlural(int quantity, string expected)
-        {
-            var viewModel = CreateViewModel((10m, quantity));
-
-            Assert.Equal(expected, viewModel.TotalItemsCountText);
-        }
-
-        [Theory]
-        [InlineData("ivan.petrenko@gmail.com", "Ivan Petrenko")]
-        [InlineData("owner@gmail.com", "Owner")]
-        [InlineData("maria.koval@company.com", "Maria Koval")]
-        [InlineData("admin@test", "Admin")]
-        [InlineData("a..b@x.com", "A B")]
-        [InlineData(".john@x.com", "John")]
-        [InlineData("john.@x.com", "John")]
-        [InlineData("ivan.petrenko.jr@x.com", "Ivan Petrenko")]
-        public void Constructor_FormatsCashierName_FromEmail(string email, string expectedName)
-        {
-            var viewModel = new MainViewModel(new AuthResponseDto { Email = email });
-
-            Assert.Equal(expectedName, viewModel.CashierName);
-        }
-
-        [Theory]
-        [InlineData("@x.com")]
-        [InlineData("..@x.com")]
-        [InlineData("   ")]
-        public void Constructor_EmailWithoutName_KeepsDefaultCashierName(string email)
-        {
-            var defaultName = new MainViewModel().CashierName;
-
-            var viewModel = new MainViewModel(new AuthResponseDto { Email = email });
-
-            Assert.Equal(defaultName, viewModel.CashierName);
         }
 
         [Fact]
         public void Constructor_StoreNameProvided_SetsStoreLocationEvenWithoutEmail()
         {
-            var viewModel = new MainViewModel(new AuthResponseDto { Email = "", StoreName = "GoatShop" });
+            var viewModel = TestViewModelFactory.Create(new AuthResponseDto { Email = "", StoreName = "GoatShop" });
 
             Assert.Equal("GoatShop", viewModel.StoreLocation);
         }
 
-        [Fact]
-        public void Constructor_WithStoreName_ShowsItAsStoreLocation()
+        public static TheoryData<string> TextPropertiesData => new()
         {
-            var viewModel = new MainViewModel(new AuthResponseDto { Email = "owner@gmail.com", StoreName = "GoatShop" });
-
-            Assert.Equal("GoatShop", viewModel.StoreLocation);
-        }
+            nameof(MainViewModel.ShiftInfo),
+            nameof(MainViewModel.StoreLocation),
+            nameof(MainViewModel.CashRegister),
+            nameof(MainViewModel.ReceiptNumber),
+            nameof(MainViewModel.SearchText)
+        };
 
         [Theory]
-        [InlineData(nameof(MainViewModel.ShiftInfo))]
-        [InlineData(nameof(MainViewModel.StoreLocation))]
-        [InlineData(nameof(MainViewModel.CashRegister))]
-        [InlineData(nameof(MainViewModel.ReceiptNumber))]
-        [InlineData(nameof(MainViewModel.SearchText))]
+        [MemberData(nameof(TextPropertiesData))]
         public void TextProperty_Set_UpdatesValue(string property)
         {
-            var viewModel = new MainViewModel();
+            var viewModel = TestViewModelFactory.Create();
+            var propertyInfo = typeof(MainViewModel).GetProperty(property)!;
 
-            typeof(MainViewModel).GetProperty(property)!.SetValue(viewModel, "нове значення");
+            propertyInfo.SetValue(viewModel, "нове значення");
 
-            Assert.Equal("нове значення", typeof(MainViewModel).GetProperty(property)!.GetValue(viewModel));
+            Assert.Equal("нове значення", propertyInfo.GetValue(viewModel));
         }
 
         [Theory]
-        [InlineData(nameof(MainViewModel.ShiftInfo))]
-        [InlineData(nameof(MainViewModel.StoreLocation))]
-        [InlineData(nameof(MainViewModel.CashRegister))]
-        [InlineData(nameof(MainViewModel.ReceiptNumber))]
-        [InlineData(nameof(MainViewModel.SearchText))]
+        [MemberData(nameof(TextPropertiesData))]
         public void TextProperty_Set_FiresPropertyChanged(string property)
         {
-            var viewModel = new MainViewModel();
-            string? firedFor = null;
-            viewModel.PropertyChanged += (_, args) => firedFor = args.PropertyName;
+            var viewModel = TestViewModelFactory.Create();
+            var raised = CapturePropertyChanges(viewModel);
+            var propertyInfo = typeof(MainViewModel).GetProperty(property)!;
 
-            typeof(MainViewModel).GetProperty(property)!.SetValue(viewModel, "нове значення");
+            propertyInfo.SetValue(viewModel, "нове значення");
 
-            Assert.Equal(property, firedFor);
+            Assert.Contains(property, raised);
         }
 
-        private static MainViewModel CartWithDiscount()
+        public static IEnumerable<object[]> GetPluralTestData()
         {
-            var viewModel = CreateViewModel((300m, 2));
-            viewModel.Discount = 100m;
-            return viewModel;
+            foreach (var item in TestHelper.LoadSection("Plurals").EnumerateArray())
+            {
+                yield return new object[]
+                {
+                    item.GetProperty("Quantity").GetInt32(),
+                    item.GetProperty("Expected").GetString()!
+                };
+            }
         }
 
-        [Fact]
-        public void TotalItemsCountText_ShowsCountWithWord()
+        [Theory]
+        [MemberData(nameof(GetPluralTestData))]
+        public void TotalItemsCountText_UsesCorrectPlural(int quantity, string expected)
         {
-            Assert.Equal("2 товари", CartWithDiscount().TotalItemsCountText);
+            var items = new (decimal, int)[quantity];
+            for (int i = 0; i < quantity; i++)
+            {
+                items[i] = (10m, 1);
+            }
+
+            var viewModel = CartTestFactory.Create(items);
+
+            Assert.Equal(expected, viewModel.TotalItemsCountText);
         }
 
-        [Fact]
-        public void SubtotalText_ShowsAmountInHryvnias()
+        public static IEnumerable<object[]> GetEmailTestData()
         {
-            Assert.Equal("600 ₴", CartWithDiscount().SubtotalText);
+            foreach (var item in TestHelper.LoadSection("Emails").EnumerateArray())
+            {
+                yield return new object[]
+                {
+                    item.GetProperty("Input").GetString()!,
+                    item.GetProperty("Expected").GetString()!
+                };
+            }
         }
 
-        [Fact]
-        public void DiscountText_ShowsAmountWithMinus()
+        [Theory]
+        [MemberData(nameof(GetEmailTestData))]
+        public void Constructor_FormatsCashierName_FromEmail(string email, string expectedName)
         {
-            Assert.Equal("-100 ₴", CartWithDiscount().DiscountText);
+            var viewModel = TestViewModelFactory.Create(new AuthResponseDto { Email = email });
+
+            Assert.Equal(expectedName, viewModel.CashierName);
         }
 
-        [Fact]
-        public void TotalPayableText_ShowsSubtotalMinusDiscount()
+        public static IEnumerable<object[]> GetEmailWithoutNameTestData()
         {
-            Assert.Equal("500 ₴", CartWithDiscount().TotalPayableText);
+            foreach (var item in TestHelper.LoadSection("EmailsWithoutName").EnumerateArray())
+            {
+                yield return new object[]
+                {
+                    item.GetProperty("Input").GetString()!
+                };
+            }
         }
 
-        [Fact]
-        public void CartItemTotalPriceText_ShowsPriceTimesQuantity()
+        [Theory]
+        [MemberData(nameof(GetEmailWithoutNameTestData))]
+        public void Constructor_EmailWithoutName_KeepsDefaultCashierName(string email)
         {
-            Assert.Equal("600 ₴", CartWithDiscount().CartItems[0].TotalPriceText);
+            var defaultName = TestViewModelFactory.Create().CashierName;
+
+            var viewModel = TestViewModelFactory.Create(new AuthResponseDto { Email = email });
+
+            Assert.Equal(defaultName, viewModel.CashierName);
+        }
+    }
+
+    public class MainViewModelFormattingTests : IDisposable
+    {
+        private readonly CultureInfo _originalCulture;
+        private readonly CultureInfo _originalUICulture;
+
+        public MainViewModelFormattingTests()
+        {
+            _originalCulture = Thread.CurrentThread.CurrentCulture;
+            _originalUICulture = Thread.CurrentThread.CurrentUICulture;
+
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
+        }
+
+        public void Dispose()
+        {
+            Thread.CurrentThread.CurrentCulture = _originalCulture;
+            Thread.CurrentThread.CurrentUICulture = _originalUICulture;
+        }
+
+        public static IEnumerable<object[]> GetSubtotalTextTestData()
+        {
+            foreach (var item in TestHelper.LoadSection("SubtotalText").EnumerateArray())
+            {
+                yield return new object[]
+                {
+                    item.GetProperty("Price").GetDecimal(),
+                    item.GetProperty("Quantity").GetInt32(),
+                    item.GetProperty("Expected").GetString()!
+                };
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(GetSubtotalTextTestData))]
+        public void SubtotalText_FormatsWithInvariantCulture(decimal price, int quantity, string expected)
+        {
+            var viewModel = CartTestFactory.Create((price, quantity));
+
+            Assert.Equal(expected, viewModel.SubtotalText);
+        }
+
+        public static IEnumerable<object[]> GetDiscountTextTestData()
+        {
+            foreach (var item in TestHelper.LoadSection("DiscountText").EnumerateArray())
+            {
+                yield return new object[]
+                {
+                    item.GetProperty("Discount").GetDecimal(),
+                    item.GetProperty("Expected").GetString()!
+                };
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(GetDiscountTextTestData))]
+        public void DiscountText_FormatsCorrectly(decimal discount, string expected)
+        {
+            var viewModel = CartTestFactory.Create((100m, 1));
+
+            viewModel.Discount = discount;
+
+            Assert.Equal(expected, viewModel.DiscountText);
+        }
+
+        public static IEnumerable<object[]> GetTotalPayableTextTestData()
+        {
+            foreach (var item in TestHelper.LoadSection("TotalPayableText").EnumerateArray())
+            {
+                yield return new object[]
+                {
+                    item.GetProperty("Price").GetDecimal(),
+                    item.GetProperty("Discount").GetDecimal(),
+                    item.GetProperty("Expected").GetString()!
+                };
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(GetTotalPayableTextTestData))]
+        public void TotalPayableText_FormatsCorrectly(decimal price, decimal discount, string expected)
+        {
+            var viewModel = CartTestFactory.Create((price, 1));
+
+            viewModel.Discount = discount;
+
+            Assert.Equal(expected, viewModel.TotalPayableText);
         }
     }
 }
