@@ -10,14 +10,12 @@ on:
 
 jobs:
   test:
-    # Windows, бо LogWindowUI.Tests збирається під net8.0-windows (WPF)
     runs-on: windows-latest
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # 8.0 — runtime для тестів, 9.0 — SDK, який уміє читати .slnx
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
