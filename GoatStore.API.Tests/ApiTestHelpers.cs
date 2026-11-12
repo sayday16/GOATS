@@ -15,7 +15,6 @@ public static class ApiTestHelpers
     public const string Password = "Password123!";
     public const string StorePassword = "StorePassword123!";
 
-    // База спільна для всіх тестів класу, тому кожен тест бере свої унікальні email і назву магазину
     public static string UniqueEmail(string prefix) => $"{prefix}_{Guid.NewGuid():N}@test.com";
 
     public static string UniqueStoreName() => $"Store_{Guid.NewGuid():N}";
@@ -58,7 +57,6 @@ public static class ApiTestHelpers
         return result!["product"]!["id"]!.ToString();
     }
 
-    // Токен, підписаний вручну: для перевірки, що API відхиляє прострочені й підроблені токени
     public static string CreateToken(string signingKey, DateTime expiresAt)
     {
         var credentials = new SigningCredentials(
