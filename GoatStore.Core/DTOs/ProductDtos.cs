@@ -17,7 +17,6 @@ namespace GoatStore.Core.DTOs
 
     public class ProductFilterDto
     {
-        // Шукає в назві, бренді й артикулі без урахування регістру
         public string? Search { get; set; }
         public string? Category { get; set; }
         public string? Brand { get; set; }
@@ -40,7 +39,6 @@ namespace GoatStore.Core.DTOs
         public DateTime? SoldDate { get; set; }
     }
 
-    // Значення для випадаючих списків фільтрів на складі
     public class ProductFilterOptionsDto
     {
         public IReadOnlyList<string> Categories { get; set; } = [];

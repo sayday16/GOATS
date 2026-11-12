@@ -29,7 +29,6 @@ public class ProductEndpointsTests : IClassFixture<TestApplicationFactory>
     {
         var storeName = ApiTestHelpers.UniqueStoreName();
 
-        // Спершу власник створює магазин, потім продавець приєднується до нього
         await _client.RegisterAndLoginAsync(ApiTestHelpers.UniqueEmail("owner"), ApiTestHelpers.OwnerRole, storeName);
         var token = await _client.RegisterAndLoginAsync(ApiTestHelpers.UniqueEmail("seller"), ApiTestHelpers.SellerRole, storeName);
         _client.UseToken(token);
@@ -37,7 +36,6 @@ public class ProductEndpointsTests : IClassFixture<TestApplicationFactory>
         var productRequest = new { Title = "Test Product", Brand = "Test Brand", Size = "M", Category = "Одяг", PurchasePrice = 50m, SalePrice = 100m };
         var response = await _client.PostAsJsonAsync("/api/products", productRequest);
 
-        // Саме 403 (роль), а не 400 (валідація)
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 

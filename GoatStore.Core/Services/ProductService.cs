@@ -139,7 +139,6 @@ namespace GoatStore.Core.Services
         {
             var soldAt = _timeProvider.GetUtcNow().UtcDateTime;
 
-            // Умовний UPDATE в одному запиті: з двох одночасних продажів пройде лише один.
             var updated = await _context.Products
                 .Where(p => p.Id == productId && p.StoreId == storeId && p.Status == ProductStatus.InStock)
                 .ExecuteUpdateAsync(setters => setters
