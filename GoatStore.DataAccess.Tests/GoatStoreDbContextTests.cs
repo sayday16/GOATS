@@ -254,4 +254,110 @@ public class GoatStoreDbContextTests
 
         Assert.Null(exception);
     }
+
+    private static async Task<(Store Store, User Seller, Product Product)> AddStoreWithSellerAndProductAsync(
+        GoatStoreDbContext context, string name = "Sales Shop")
+    {
+        var store = new Store { Name = name, NormalizedName = name.ToLowerInvariant() };
+        var seller = new User { Email = $"{Guid.NewGuid():N}@gmail.com", PasswordHash = "hash", Role = UserRole.Seller, Store = store };
+        var product = new Product { Title = "Levi's 501", PurchasePrice = 400m, SalePrice = 1200m, Store = store };
+        context.AddRange(store, seller, product);
+        await context.SaveChangesAsync();
+        return (store, seller, product);
+    }
+
+    private static Sale NewSale(Store store, User seller, int number, Product? product = null, decimal unitPrice = 1200m) => new()
+    {
+        StoreId = store.Id,
+        SoldByUserId = seller.Id,
+        Number = number,
+        PaymentMethod = PaymentMethod.Cash,
+        Items = product is null
+            ? []
+            : [new SaleItem { ProductId = product.Id, Quantity = 1, UnitPrice = unitPrice, PurchasePrice = 400m }]
+    };
+
+    [Fact]
+    public async Task AddSale_DuplicateNumberInSameStore_ThrowsDbUpdateException()
+    {
+        using var context = TestDb.CreateInMemoryContext();
+        var (store, seller, _) = await AddStoreWithSellerAndProductAsync(context);
+        context.Sales.Add(NewSale(store, seller, 1));
+        await context.SaveChangesAsync();
+
+        context.Sales.Add(NewSale(store, seller, 1));
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+    }
+
+    [Fact]
+    public async Task AddSale_SameNumberInDifferentStores_IsAllowed()
+    {
+        using var context = TestDb.CreateInMemoryContext();
+        var (storeA, sellerA, _) = await AddStoreWithSellerAndProductAsync(context, "Shop A");
+        var (storeB, sellerB, _) = await AddStoreWithSellerAndProductAsync(context, "Shop B");
+        context.Sales.AddRange(NewSale(storeA, sellerA, 1), NewSale(storeB, sellerB, 1));
+
+        var exception = await Record.ExceptionAsync(() => context.SaveChangesAsync());
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public async Task DeleteProduct_WithSaleItems_ThrowsDbUpdateException()
+    {
+        using var context = TestDb.CreateInMemoryContext();
+        var (store, seller, product) = await AddStoreWithSellerAndProductAsync(context);
+        context.Sales.Add(NewSale(store, seller, 1, product));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        context.Products.Remove(await context.Products.FirstAsync(p => p.Id == product.Id));
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+    }
+
+    [Fact]
+    public async Task DeleteSale_WithItems_ThrowsDbUpdateException()
+    {
+        using var context = TestDb.CreateInMemoryContext();
+        var (store, seller, product) = await AddStoreWithSellerAndProductAsync(context);
+        var sale = NewSale(store, seller, 1, product);
+        context.Sales.Add(sale);
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        context.Sales.Remove(await context.Sales.FirstAsync(s => s.Id == sale.Id));
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+    }
+
+    [Fact]
+    public async Task PaymentMethod_IsStoredAsString()
+    {
+        using var context = TestDb.CreateInMemoryContext();
+        var (store, seller, _) = await AddStoreWithSellerAndProductAsync(context);
+        context.Sales.Add(NewSale(store, seller, 1));
+        await context.SaveChangesAsync();
+
+        var storedMethod = await context.Database
+            .SqlQueryRaw<string>("SELECT \"PaymentMethod\" AS \"Value\" FROM \"Sales\"")
+            .SingleAsync();
+
+        Assert.Equal("Cash", storedMethod);
+    }
+
+    [Fact]
+    public async Task SaleItemPrice_KeepsKopecks()
+    {
+        using var context = TestDb.CreateInMemoryContext();
+        var (store, seller, product) = await AddStoreWithSellerAndProductAsync(context);
+        context.Sales.Add(NewSale(store, seller, 1, product, unitPrice: 1234.56m));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var storedPrice = (await context.SaleItems.SingleAsync()).UnitPrice;
+
+        Assert.Equal(1234.56m, storedPrice);
+    }
 }
