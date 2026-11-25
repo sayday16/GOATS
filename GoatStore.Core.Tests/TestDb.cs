@@ -92,6 +92,24 @@ namespace GoatStore.Core.Tests
         public override DateTimeOffset GetUtcNow() => now;
     }
 
+    public sealed class BeforeCommandInterceptor(string commandStart, Action action) : DbCommandInterceptor
+    {
+        private bool _done;
+
+        public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+            System.Data.Common.DbCommand command, CommandEventData eventData, InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (!_done && command.CommandText.TrimStart().StartsWith(commandStart, StringComparison.OrdinalIgnoreCase))
+            {
+                _done = true;
+                action();
+            }
+
+            return base.NonQueryExecutingAsync(command, eventData, result, cancellationToken);
+        }
+    }
+
     // Виконує дію один раз перед першим SaveChanges: так імітуємо інший запит, що встиг записати дані раніше
     public sealed class BeforeSaveInterceptor(Action action) : SaveChangesInterceptor
     {

@@ -118,7 +118,7 @@ namespace GoatStore.Core.Services
             if (validationError is not null)
                 return Fail(ProductError.Validation, validationError);
 
-            var product = await FindAsync(storeId, productId, tracking: true, cancellationToken);
+            var product = await FindAsync(storeId, productId, tracking: false, cancellationToken);
             if (product is null)
                 return NotFound();
 
@@ -128,11 +128,29 @@ namespace GoatStore.Core.Services
             if (await SkuTakenAsync(storeId, fields.Sku, exceptProductId: productId, cancellationToken))
                 return SkuConflict();
 
-            Apply(product, request, fields);
+            var updated = await _context.Products
+                .Where(p => p.Id == productId && p.StoreId == storeId
+                    && p.Quantity == product.Quantity && p.Status == product.Status)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(p => p.Title, fields.Title)
+                    .SetProperty(p => p.Brand, fields.Brand)
+                    .SetProperty(p => p.Size, fields.Size)
+                    .SetProperty(p => p.Category, fields.Category)
+                    .SetProperty(p => p.Sku, fields.Sku)
+                    .SetProperty(p => p.Condition, request.Condition)
+                    .SetProperty(p => p.PurchasePrice, request.PurchasePrice)
+                    .SetProperty(p => p.SalePrice, request.SalePrice)
+                    .SetProperty(p => p.IsUnique, request.IsUnique)
+                    .SetProperty(p => p.Quantity, request.Quantity)
+                    .SetProperty(p => p.Status, ProductStatus.InStock)
+                    .SetProperty(p => p.SoldDate, (DateTime?)null),
+                    cancellationToken);
 
-            await _context.SaveChangesAsync(cancellationToken);
+            if (updated == 0)
+                return ChangedMeanwhile();
 
-            return Success(product, "Товар оновлено.");
+            var saved = await FindAsync(storeId, productId, tracking: false, cancellationToken);
+            return Success(saved!, "Товар оновлено.");
         }
 
         public async Task<ProductResponseDto> SellAsync(
@@ -156,17 +174,21 @@ namespace GoatStore.Core.Services
         public async Task<ProductResponseDto> DeleteAsync(
             Guid storeId, Guid productId, CancellationToken cancellationToken = default)
         {
-            var product = await FindAsync(storeId, productId, tracking: true, cancellationToken);
+            var product = await FindAsync(storeId, productId, tracking: false, cancellationToken);
             if (product is null)
                 return NotFound();
 
             if (product.Status == ProductStatus.Sold || await _context.SaleItems.AnyAsync(i => i.ProductId == productId, cancellationToken))
-                return Fail(ProductError.Conflict, "Проданий товар не можна видалити: він потрібен для звітів.");
+                return SoldCannotBeDeleted();
 
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync(cancellationToken);
+            var deleted = await _context.Products
+                .Where(p => p.Id == productId && p.StoreId == storeId && p.Status == ProductStatus.InStock
+                    && !_context.SaleItems.Any(i => i.ProductId == p.Id))
+                .ExecuteDeleteAsync(cancellationToken);
 
-            return Success(product, "Товар видалено.");
+            return deleted == 0
+                ? SoldCannotBeDeleted()
+                : Success(product, "Товар видалено.");
         }
 
         private Task<Product?> FindAsync(Guid storeId, Guid productId, bool tracking, CancellationToken cancellationToken)
@@ -215,6 +237,12 @@ namespace GoatStore.Core.Services
                 p => p.StoreId == storeId && p.Id != exceptProductId && p.Sku != null && p.Sku.ToLower() == skuKey,
                 cancellationToken);
         }
+
+        private static ProductResponseDto ChangedMeanwhile() =>
+            Fail(ProductError.Conflict, "Товар щойно змінився (можливо, його продали). Оновіть список і спробуйте ще раз.");
+
+        private static ProductResponseDto SoldCannotBeDeleted() =>
+            Fail(ProductError.Conflict, "Проданий товар не можна видалити: він потрібен для звітів.");
 
         private static ProductResponseDto SkuConflict() =>
             Fail(ProductError.Conflict, "Цей артикул уже використано (можливо, у проданого товару). Вкажіть інший.");
