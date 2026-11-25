@@ -21,6 +21,7 @@ namespace LogWindowUI.ViewModels
         public int PurchasedQuantity { get; set; }
         public int ReturnedQuantity { get; set; }
         public decimal UnitPrice { get; set; }
+        public decimal DiscountRatio { get; set; } = 1m;
 
         public int AvailableToReturn => Math.Max(0, PurchasedQuantity - ReturnedQuantity);
         public bool CanReturn => AvailableToReturn > 0;
@@ -43,7 +44,7 @@ namespace LogWindowUI.ViewModels
             }
         }
 
-        public decimal ReturnLineTotal => UnitPrice * QuantityToReturn;
+        public decimal ReturnLineTotal => Math.Round(UnitPrice * QuantityToReturn * DiscountRatio, 2);
         public string ReturnLineTotalText => $"{ReturnLineTotal:N0} ₴";
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -133,8 +134,8 @@ namespace LogWindowUI.ViewModels
             {
                 decimal total = 0m;
                 foreach (var item in Items)
-                    total += item.ReturnLineTotal;
-                return total;
+                    total += item.UnitPrice * item.QuantityToReturn * item.DiscountRatio;
+                return Math.Round(total, 2);
             }
         }
 
@@ -273,6 +274,7 @@ namespace LogWindowUI.ViewModels
             Items.Clear();
 
             CurrentSale = sale;
+            decimal discountRatio = sale.Subtotal > 0m ? (sale.Subtotal - sale.Discount) / sale.Subtotal : 1m;
 
             foreach (var line in sale.Items)
             {
@@ -283,7 +285,8 @@ namespace LogWindowUI.ViewModels
                     Sku = line.Sku ?? string.Empty,
                     PurchasedQuantity = line.Quantity,
                     ReturnedQuantity = line.ReturnedQuantity,
-                    UnitPrice = line.UnitPrice
+                    UnitPrice = line.UnitPrice,
+                    DiscountRatio = discountRatio
                 };
                 vm.PropertyChanged += Item_PropertyChanged;
                 Items.Add(vm);

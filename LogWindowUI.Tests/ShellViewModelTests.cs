@@ -107,6 +107,61 @@ namespace LogWindowUI.Tests
         }
 
         [Fact]
+        public void ShowReturnsCommand_SetsReturnsActive()
+        {
+            var vm = CreateViewModel();
+
+            vm.ShowReturnsCommand.Execute(null);
+
+            Assert.True(vm.IsReturnsActive);
+        }
+
+        [Fact]
+        public void ShowReturnsCommand_SetsPosInactive()
+        {
+            var vm = CreateViewModel();
+            vm.ShowPosCommand.Execute(null);
+
+            vm.ShowReturnsCommand.Execute(null);
+
+            Assert.False(vm.IsPosActive);
+        }
+
+        [Fact]
+        public void ShowReturnsCommand_SetsCurrentViewToReturnsViewModel()
+        {
+            var vm = CreateViewModel();
+
+            vm.ShowReturnsCommand.Execute(null);
+
+            Assert.IsType<ReturnsViewModel>(vm.CurrentView);
+        }
+
+        [Fact]
+        public void ShowReturnsCommand_Twice_ReusesReturnsViewModel()
+        {
+            var vm = CreateViewModel();
+            vm.ShowReturnsCommand.Execute(null);
+            var returns = vm.CurrentView;
+            vm.ShowPosCommand.Execute(null);
+
+            vm.ShowReturnsCommand.Execute(null);
+
+            Assert.Same(returns, vm.CurrentView);
+        }
+
+        [Fact]
+        public void ShowPosCommand_AfterReturns_SetsReturnsInactive()
+        {
+            var vm = CreateViewModel();
+            vm.ShowReturnsCommand.Execute(null);
+
+            vm.ShowPosCommand.Execute(null);
+
+            Assert.False(vm.IsReturnsActive);
+        }
+
+        [Fact]
         public void UserEmail_ReturnsAuthEmail()
         {
             var vm = CreateViewModel();

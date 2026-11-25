@@ -67,7 +67,6 @@ namespace LogWindowUI.ViewModels
         private bool _isCardPayment = true;
         private bool _isCashPayment = false;
         private bool _isCheckingOut = false;
-        private bool _isReturnsTabActive = false;
         private decimal _discount = 0m;
         private string _discountInput = string.Empty;
         private string _searchText = string.Empty;
@@ -97,28 +96,6 @@ namespace LogWindowUI.ViewModels
                 RecalculateTotals();
             }
         }
-
-
-        public ReturnsViewModel ReturnsViewModel { get; }
-
-        public bool IsReturnsTabActive
-        {
-            get => _isReturnsTabActive;
-            set
-            {
-                if (_isReturnsTabActive != value)
-                {
-                    _isReturnsTabActive = value;
-                    OnPropertyChanged();
-                    OnPropertyChanged(nameof(IsPosTabActive));
-                }
-            }
-        }
-
-        public bool IsPosTabActive => !IsReturnsTabActive;
-
-        public ICommand ShowPosTabCommand { get; }
-        public ICommand ShowReturnsTabCommand { get; }
 
         private void CartItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
@@ -223,9 +200,6 @@ namespace LogWindowUI.ViewModels
             _productApiClient = productApiClient;
             _dialogService = dialogService;
             _saleApiClient = saleApiClient ?? App.CreateSaleApiClient();
-            ReturnsViewModel = new ReturnsViewModel(_saleApiClient, _dialogService);
-            ShowPosTabCommand = new RelayCommand(_ => IsReturnsTabActive = false);
-            ShowReturnsTabCommand = new RelayCommand(_ => IsReturnsTabActive = true);
 
             if (authResponse != null && !string.IsNullOrWhiteSpace(authResponse.Email))
             {
@@ -334,7 +308,7 @@ namespace LogWindowUI.ViewModels
 
                     foreach (var p in results)
                     {
-                        if (string.Equals((p.Title ?? string.Empty).Trim(), query, StringComparison.OrdinalIgnoreCase))
+                        if (string.Equals(p.Title.Trim(), query, StringComparison.OrdinalIgnoreCase))
                         {
                             exactTitleMatch = p;
                             exactTitleCount++;

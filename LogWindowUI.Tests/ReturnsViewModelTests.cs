@@ -356,24 +356,62 @@ namespace LogWindowUI.Tests
         }
 
         [Fact]
-        public void ShowReturnsTabCommand_SwitchesMainViewModelToReturnsTab()
+        public void SelectedReturnSubtotal_SaleWithDiscount_AppliesDiscountShare()
         {
-            var mainVm = new MainViewModel(new AuthResponseDto(), new FakeProductApiClient(), _dialog, _saleApi);
+            var vm = LoadSampleSale();
 
-            mainVm.ShowReturnsTabCommand.Execute(null);
+            vm.IncreaseReturnQuantityCommand.Execute(vm.Items[0]);
+            vm.IncreaseReturnQuantityCommand.Execute(vm.Items[0]);
 
-            Assert.True(mainVm.IsReturnsTabActive);
+            Assert.Equal(960m, vm.SelectedReturnSubtotal);
         }
 
         [Fact]
-        public void ShowPosTabCommand_SwitchesMainViewModelBackToPosTab()
+        public void ReturnLineTotal_SaleWithDiscount_AppliesDiscountShare()
         {
-            var mainVm = new MainViewModel(new AuthResponseDto(), new FakeProductApiClient(), _dialog, _saleApi);
-            mainVm.ShowReturnsTabCommand.Execute(null);
+            var vm = LoadSampleSale();
 
-            mainVm.ShowPosTabCommand.Execute(null);
+            vm.IncreaseReturnQuantityCommand.Execute(vm.Items[0]);
 
-            Assert.True(mainVm.IsPosTabActive);
+            Assert.Equal(480m, vm.Items[0].ReturnLineTotal);
+        }
+
+        [Fact]
+        public void SelectedReturnSubtotal_SaleWithoutDiscount_UsesFullPrice()
+        {
+            var vm = LoadSaleWithoutDiscount();
+
+            vm.IncreaseReturnQuantityCommand.Execute(vm.Items[0]);
+
+            Assert.Equal(500m, vm.SelectedReturnSubtotal);
+        }
+
+        [Fact]
+        public void SelectedReturnSubtotal_UnevenDiscount_RoundsToKopecks()
+        {
+            var vm = CreateViewModel();
+            var sale = SampleSale();
+            sale.Discount = 1m;
+            sale.Total = 2499m;
+            _saleApi.GetResponse = new SaleResponseDto { IsSuccess = true, Sale = sale };
+            vm.ReceiptNumberInput = "15";
+            vm.FindSaleCommand.Execute(null);
+
+            vm.IncreaseReturnQuantityCommand.Execute(vm.Items[0]);
+
+            Assert.Equal(499.80m, vm.SelectedReturnSubtotal);
+        }
+
+        private ReturnsViewModel LoadSaleWithoutDiscount()
+        {
+            var vm = CreateViewModel();
+            var sale = SampleSale();
+            sale.Discount = 0m;
+            sale.Total = sale.Subtotal;
+            _saleApi.GetResponse = new SaleResponseDto { IsSuccess = true, Sale = sale };
+            vm.ReceiptNumberInput = "15";
+            vm.FindSaleCommand.Execute(null);
+            return vm;
         }
     }
 }

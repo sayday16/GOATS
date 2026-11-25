@@ -19,6 +19,7 @@ namespace LogWindowUI.ViewModels
 
         private InventoryViewModel? _inventoryViewModel;
         private MainViewModel? _posViewModel;
+        private ReturnsViewModel? _returnsViewModel;
 
         public object? CurrentView
         {
@@ -89,7 +90,6 @@ namespace LogWindowUI.ViewModels
             IsReturnsActive = false;
 
             _posViewModel ??= new MainViewModel(_authResponse, _productApiClient, new WpfDialogService(), _saleApiClient);
-            _posViewModel.IsReturnsTabActive = false;
 
             CurrentView = _posViewModel;
         }
@@ -100,10 +100,9 @@ namespace LogWindowUI.ViewModels
             IsPosActive = false;
             IsReturnsActive = true;
 
-            _posViewModel ??= new MainViewModel(_authResponse, _productApiClient, new WpfDialogService(), _saleApiClient);
-            _posViewModel.IsReturnsTabActive = true;
+            _returnsViewModel ??= new ReturnsViewModel(_saleApiClient, new WpfDialogService());
 
-            CurrentView = _posViewModel.ReturnsViewModel;
+            CurrentView = _returnsViewModel;
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
