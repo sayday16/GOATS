@@ -60,6 +60,7 @@ namespace GoatStore.Core.Tests
                 PurchasePrice = 100m,
                 SalePrice = 250m,
                 Status = status,
+                Quantity = status == ProductStatus.Sold ? 0 : 1,
                 SoldDate = status == ProductStatus.Sold ? new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) : null,
                 StoreId = storeId
             };
