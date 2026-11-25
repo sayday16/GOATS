@@ -1,8 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Linq;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -25,7 +26,9 @@ namespace LogWindowUI.ViewModels
         public string Sku { get; set; } = string.Empty;
         public decimal SalePrice { get; set; }
         public string Status { get; set; } = "InStock";
-
+        public bool IsUnique { get; set; } = true;
+        public int MaxQuantity { get; set; } = 1;
+        public bool CanChangeQuantity => !IsUnique;
         public string IconKind { get; set; } = "Tshirt";
 
         public int Quantity
@@ -57,19 +60,22 @@ namespace LogWindowUI.ViewModels
     public class MainViewModel : INotifyPropertyChanged
     {
         private readonly IProductApiClient _productApiClient;
+        private readonly ISaleApiClient _saleApiClient;
         private readonly IDialogService _dialogService;
 
         private ObservableCollection<CartItemViewModel> _cartItems = new();
         private bool _isCardPayment = true;
         private bool _isCashPayment = false;
         private bool _isCheckingOut = false;
+        private bool _isReturnsTabActive = false;
         private decimal _discount = 0m;
+        private string _discountInput = string.Empty;
         private string _searchText = string.Empty;
         private string _cashierName = "Олена Коваль";
         private string _shiftInfo = "З 09:00 · 6 год 24 хв";
         private string _storeLocation = "Київ · Центр";
         private string _cashRegister = "Каса №2 · онлайн";
-        private string _receiptNumber = "Чек #000184 · 1 жовтня, 15:24";
+        private string _receiptNumber = "Новий чек";
 
         public ObservableCollection<CartItemViewModel> CartItems
         {
@@ -92,6 +98,28 @@ namespace LogWindowUI.ViewModels
             }
         }
 
+
+        public ReturnsViewModel ReturnsViewModel { get; }
+
+        public bool IsReturnsTabActive
+        {
+            get => _isReturnsTabActive;
+            set
+            {
+                if (_isReturnsTabActive != value)
+                {
+                    _isReturnsTabActive = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsPosTabActive));
+                }
+            }
+        }
+
+        public bool IsPosTabActive => !IsReturnsTabActive;
+
+        public ICommand ShowPosTabCommand { get; }
+        public ICommand ShowReturnsTabCommand { get; }
+
         private void CartItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             if (e.OldItems != null)
@@ -113,6 +141,7 @@ namespace LogWindowUI.ViewModels
         public string CashRegister { get => _cashRegister; set { _cashRegister = value; OnPropertyChanged(); } }
         public string ReceiptNumber { get => _receiptNumber; set { _receiptNumber = value; OnPropertyChanged(); } }
         public string SearchText { get => _searchText; set { _searchText = value; OnPropertyChanged(); } }
+        public string DiscountInput { get => _discountInput; set { _discountInput = value; OnPropertyChanged(); } }
 
         public bool IsCardPayment
         {
@@ -126,7 +155,16 @@ namespace LogWindowUI.ViewModels
             set { if (_isCashPayment != value) { _isCashPayment = value; OnPropertyChanged(); if (value) IsCardPayment = false; } }
         }
 
-        public int TotalItemsCount => CartItems.Sum(i => i.Quantity);
+        public int TotalItemsCount
+        {
+            get
+            {
+                int total = 0;
+                foreach (var item in CartItems) total += item.Quantity;
+                return total;
+            }
+        }
+
         public string TotalItemsCountText => $"{TotalItemsCount} {Pluralize(TotalItemsCount, "товар", "товари", "товарів")}";
 
         private static string Pluralize(int n, string one, string few, string many)
@@ -137,7 +175,16 @@ namespace LogWindowUI.ViewModels
 
         private static string Capitalize(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s.Substring(1);
 
-        public decimal Subtotal => CartItems.Sum(i => i.TotalPrice);
+        public decimal Subtotal
+        {
+            get
+            {
+                decimal total = 0m;
+                foreach (var item in CartItems) total += item.TotalPrice;
+                return total;
+            }
+        }
+
         public string SubtotalText => $"{Subtotal:N0} ₴";
 
         public decimal Discount
@@ -161,13 +208,24 @@ namespace LogWindowUI.ViewModels
         public ICommand ClearCartCommand { get; }
         public ICommand SelectCardCommand { get; }
         public ICommand SelectCashCommand { get; }
+        public ICommand ApplyDiscountCommand { get; }
+        public ICommand IncreaseQuantityCommand { get; }
+        public ICommand DecreaseQuantityCommand { get; }
         public ICommand CheckoutCommand { get; }
         public ICommand SearchCommand { get; }
 
-        public MainViewModel(AuthResponseDto? authResponse, IProductApiClient productApiClient, IDialogService dialogService)
+        public MainViewModel(
+            AuthResponseDto? authResponse,
+            IProductApiClient productApiClient,
+            IDialogService dialogService,
+            ISaleApiClient? saleApiClient = null)
         {
             _productApiClient = productApiClient;
             _dialogService = dialogService;
+            _saleApiClient = saleApiClient ?? App.CreateSaleApiClient();
+            ReturnsViewModel = new ReturnsViewModel(_saleApiClient, _dialogService);
+            ShowPosTabCommand = new RelayCommand(_ => IsReturnsTabActive = false);
+            ShowReturnsTabCommand = new RelayCommand(_ => IsReturnsTabActive = true);
 
             if (authResponse != null && !string.IsNullOrWhiteSpace(authResponse.Email))
             {
@@ -187,16 +245,60 @@ namespace LogWindowUI.ViewModels
             ClearCartCommand = new RelayCommand(_ =>
             {
                 CartItems.Clear();
-                Discount = 0;
+                Discount = 0m;
+                DiscountInput = string.Empty;
             });
 
             SelectCardCommand = new RelayCommand(_ => { IsCardPayment = true; IsCashPayment = false; });
             SelectCashCommand = new RelayCommand(_ => { IsCashPayment = true; IsCardPayment = false; });
+            ApplyDiscountCommand = new RelayCommand(_ => ApplyDiscount());
+
+            IncreaseQuantityCommand = new RelayCommand(p =>
+            {
+                if (p is CartItemViewModel item && !item.IsUnique && item.Quantity < item.MaxQuantity)
+                    item.Quantity++;
+            });
+
+            DecreaseQuantityCommand = new RelayCommand(p =>
+            {
+                if (p is CartItemViewModel item && !item.IsUnique && item.Quantity > 1)
+                    item.Quantity--;
+            });
 
             SearchCommand = new RelayCommand(async _ => await SearchProductAsync());
             CheckoutCommand = new RelayCommand(async _ => await ProcessCheckoutAsync());
 
             CartItems = new ObservableCollection<CartItemViewModel>();
+        }
+
+        private void ApplyDiscount()
+        {
+            if (CartItems.Count == 0)
+            {
+                _dialogService.ShowWarning("Знижка", "Неможливо застосувати знижку до порожнього чека!");
+                return;
+            }
+
+            string normalized = (DiscountInput ?? string.Empty).Trim().Replace(',', '.');
+            if (!decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal parsedDiscount))
+            {
+                _dialogService.ShowWarning("Знижка", "Введіть коректну суму знижки!");
+                return;
+            }
+
+            if (parsedDiscount < 0m)
+            {
+                _dialogService.ShowWarning("Знижка", "Знижка не може бути від'ємною!");
+                return;
+            }
+
+            if (parsedDiscount > Subtotal)
+            {
+                _dialogService.ShowWarning("Знижка", "Знижка не може перевищувати суму чека!");
+                return;
+            }
+
+            Discount = parsedDiscount;
         }
 
         private async Task SearchProductAsync()
@@ -215,9 +317,33 @@ namespace LogWindowUI.ViewModels
                     return;
                 }
 
-                var productDto = (from p in results
-                                  where string.Equals(p.Sku, query, StringComparison.OrdinalIgnoreCase)
-                                  select p).FirstOrDefault();
+                ProductDto? productDto = null;
+                foreach (var p in results)
+                {
+                    if (string.Equals(p.Sku, query, StringComparison.OrdinalIgnoreCase))
+                    {
+                        productDto = p;
+                        break;
+                    }
+                }
+
+                if (productDto == null && results.Count > 1)
+                {
+                    ProductDto? exactTitleMatch = null;
+                    int exactTitleCount = 0;
+
+                    foreach (var p in results)
+                    {
+                        if (string.Equals((p.Title ?? string.Empty).Trim(), query, StringComparison.OrdinalIgnoreCase))
+                        {
+                            exactTitleMatch = p;
+                            exactTitleCount++;
+                        }
+                    }
+
+                    if (exactTitleCount == 1)
+                        productDto = exactTitleMatch;
+                }
 
                 if (productDto == null && results.Count > 1)
                 {
@@ -227,7 +353,17 @@ namespace LogWindowUI.ViewModels
 
                 productDto ??= results[0];
 
-                if (CartItems.Any(i => i.Id == productDto.Id))
+                bool alreadyInCart = false;
+                foreach (var item in CartItems)
+                {
+                    if (item.Id == productDto.Id)
+                    {
+                        alreadyInCart = true;
+                        break;
+                    }
+                }
+
+                if (alreadyInCart)
                 {
                     _dialogService.ShowInfo("Увага", "Цей товар вже додано в чек!");
                     return;
@@ -244,6 +380,8 @@ namespace LogWindowUI.ViewModels
                     Sku = productDto.Sku ?? string.Empty,
                     SalePrice = productDto.SalePrice,
                     Status = productDto.Status.ToString(),
+                    IsUnique = productDto.IsUnique,
+                    MaxQuantity = productDto.IsUnique ? 1 : Math.Max(1, productDto.Quantity),
                     IconKind = GetIconForCategory(productDto.Category)
                 });
 
@@ -263,28 +401,57 @@ namespace LogWindowUI.ViewModels
                 return;
             }
 
+            if (Discount > Subtotal)
+            {
+                _dialogService.ShowWarning("Знижка", "Знижка не може перевищувати суму чека!");
+                return;
+            }
+
             if (_isCheckingOut) return;
             _isCheckingOut = true;
 
             try
             {
-                var finalTotalText = TotalPayableText;
-                var paymentMethod = IsCardPayment ? "Картка" : "Готівка";
-
-                foreach (var item in CartItems.ToList())
+                var saleItems = new List<CreateSaleItemDto>();
+                foreach (var item in CartItems)
                 {
-                    var response = await _productApiClient.SellAsync(item.Id);
-
-                    if (!response.IsSuccess)
+                    saleItems.Add(new CreateSaleItemDto
                     {
-                        _dialogService.ShowError("Помилка", $"Помилка продажу товару {item.Title}:\n{response.Message}");
-                        return;
-                    }
-
-                    CartItems.Remove(item);
+                        ProductId = item.Id,
+                        Quantity = item.Quantity
+                    });
                 }
 
-                _dialogService.ShowInfo("Успіх", $"Чек успішно сформовано!\nСума: {finalTotalText}\nОплата: {paymentMethod}");
+                var request = new CreateSaleRequestDto
+                {
+                    Items = saleItems,
+                    PaymentMethod = IsCardPayment ? PaymentMethod.Card : PaymentMethod.Cash,
+                    Discount = Discount
+                };
+
+                var response = await _saleApiClient.CreateAsync(request);
+
+                if (!response.IsSuccess)
+                {
+                    string errorMessage = string.IsNullOrWhiteSpace(response.Message)
+                        ? "Не вдалося сформувати чек."
+                        : response.Message;
+                    _dialogService.ShowError("Помилка", errorMessage);
+                    return;
+                }
+
+                int saleNumber = response.Sale?.Number ?? 0;
+                string finalTotalText = response.Sale is { Total: > 0 }
+                    ? $"{response.Sale.Total:N0} ₴"
+                    : TotalPayableText;
+                string paymentMethod = IsCardPayment ? "Картка" : "Готівка";
+
+                ReceiptNumber = $"Чек #{saleNumber}";
+                CartItems.Clear();
+                Discount = 0m;
+                DiscountInput = string.Empty;
+
+                _dialogService.ShowInfo("Успіх", $"Чек #{saleNumber} успішно сформовано!\nСума: {finalTotalText}\nОплата: {paymentMethod}");
             }
             catch (Exception ex)
             {
@@ -310,7 +477,12 @@ namespace LogWindowUI.ViewModels
 
         private void RecalculateTotals()
         {
-            if (CartItems.Count == 0 && Discount != 0m) Discount = 0m;
+            if (CartItems.Count == 0 && Discount != 0m)
+            {
+                Discount = 0m;
+                DiscountInput = string.Empty;
+            }
+
             OnPropertyChanged(nameof(TotalItemsCount));
             OnPropertyChanged(nameof(TotalItemsCountText));
             OnPropertyChanged(nameof(Subtotal));

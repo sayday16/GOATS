@@ -23,6 +23,10 @@
             <DataTemplate DataType="{x:Type vm:MainViewModel}">
                 <views:PosView/>
             </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:ReturnsViewModel}">
+                <views:ReturnsView/>
+            </DataTemplate>
         </ResourceDictionary>
     </Window.Resources>
 
@@ -114,6 +118,38 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🛒" FontSize="18" VerticalAlignment="Center"/>
                             <TextBlock Text="Каса" Foreground="White" FontSize="14"
+                                       FontWeight="SemiBold" Margin="10,0,0,0"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding ShowReturnsCommand}"
+                            Margin="0,4" Cursor="Hand">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="Bg" CornerRadius="8"
+                                                    Background="{TemplateBinding Background}"
+                                                    Padding="12,10">
+                                                <ContentPresenter/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bg" Property="Background" Value="#1E3A5F"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="↩️" FontSize="18" VerticalAlignment="Center"/>
+                            <TextBlock Text="Повернення" Foreground="White" FontSize="14"
                                        FontWeight="SemiBold" Margin="10,0,0,0"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
