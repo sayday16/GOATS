@@ -9,14 +9,17 @@ namespace LogWindowUI.ViewModels
     public class ShellViewModel : INotifyPropertyChanged
     {
         private readonly IProductApiClient _productApiClient;
+        private readonly ISaleApiClient _saleApiClient;
         private readonly AuthResponseDto? _authResponse;
 
         private object? _currentView;
         private bool _isInventoryActive = true;
         private bool _isPosActive = false;
+        private bool _isReturnsActive = false;
 
         private InventoryViewModel? _inventoryViewModel;
         private MainViewModel? _posViewModel;
+        private ReturnsViewModel? _returnsViewModel;
 
         public object? CurrentView
         {
@@ -36,20 +39,32 @@ namespace LogWindowUI.ViewModels
             set { _isPosActive = value; OnPropertyChanged(); }
         }
 
+        public bool IsReturnsActive
+        {
+            get => _isReturnsActive;
+            set { _isReturnsActive = value; OnPropertyChanged(); }
+        }
+
         public string UserEmail => _authResponse?.Email ?? "-";
         public string UserRole => _authResponse?.Role?.ToString() ?? "-";
         public string StoreName => _authResponse?.StoreName ?? "GOAT Store";
 
         public ICommand ShowInventoryCommand { get; }
         public ICommand ShowPosCommand { get; }
+        public ICommand ShowReturnsCommand { get; }
 
-        public ShellViewModel(AuthResponseDto? authResponse, IProductApiClient? productApiClient = null)
+        public ShellViewModel(
+            AuthResponseDto? authResponse,
+            IProductApiClient? productApiClient = null,
+            ISaleApiClient? saleApiClient = null)
         {
             _authResponse = authResponse;
             _productApiClient = productApiClient ?? App.CreateProductApiClient();
+            _saleApiClient = saleApiClient ?? App.CreateSaleApiClient();
 
             ShowInventoryCommand = new RelayCommand(_ => NavigateToInventory());
             ShowPosCommand = new RelayCommand(_ => NavigateToPos());
+            ShowReturnsCommand = new RelayCommand(_ => NavigateToReturns());
 
             NavigateToInventory();
         }
@@ -58,6 +73,7 @@ namespace LogWindowUI.ViewModels
         {
             IsInventoryActive = true;
             IsPosActive = false;
+            IsReturnsActive = false;
 
             if (_inventoryViewModel == null)
                 _inventoryViewModel = new InventoryViewModel(_productApiClient);
@@ -71,10 +87,22 @@ namespace LogWindowUI.ViewModels
         {
             IsInventoryActive = false;
             IsPosActive = true;
-            
-            _posViewModel ??= new MainViewModel(_authResponse, _productApiClient, new WpfDialogService());
+            IsReturnsActive = false;
+
+            _posViewModel ??= new MainViewModel(_authResponse, _productApiClient, new WpfDialogService(), _saleApiClient);
 
             CurrentView = _posViewModel;
+        }
+
+        private void NavigateToReturns()
+        {
+            IsInventoryActive = false;
+            IsPosActive = false;
+            IsReturnsActive = true;
+
+            _returnsViewModel ??= new ReturnsViewModel(_saleApiClient, new WpfDialogService());
+
+            CurrentView = _returnsViewModel;
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

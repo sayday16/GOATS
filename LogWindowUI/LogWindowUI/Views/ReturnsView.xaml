@@ -1,0 +1,199 @@
+﻿<UserControl x:Class="LogWindowUI.Views.ReturnsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             Background="#F4F6F9"
+             mc:Ignorable="d"
+             d:DesignHeight="900" d:DesignWidth="1190">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <Style x:Key="RoundedButtonStyle" TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="24,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="White" CornerRadius="14" BorderBrush="#E2E8F0" BorderThickness="1" Padding="24">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Повернення товару" FontSize="20" FontWeight="Bold" Foreground="#0F172A"/>
+                    <TextBlock Text="Введіть номер чека, щоб знайти позиції для повного або часткового повернення"
+                               Foreground="#64748B" FontSize="13" Margin="0,4,0,0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="220" Height="42" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="12,0" Margin="0,0,12,0">
+                        <TextBox Text="{Binding ReceiptNumberInput, UpdateSourceTrigger=PropertyChanged}"
+                                 Background="Transparent" BorderThickness="0" VerticalAlignment="Center"
+                                 FontSize="14" Foreground="#1E293B">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding FindSaleCommand}"/>
+                            </TextBox.InputBindings>
+                        </TextBox>
+                    </Border>
+                    <Button Width="140" Height="42" Background="#3B82F6" BorderThickness="0" Cursor="Hand"
+                            Style="{StaticResource RoundedButtonStyle}" Command="{Binding FindSaleCommand}">
+                        <TextBlock Text="Знайти чек" Foreground="White" FontWeight="SemiBold" FontSize="14"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Background="#ECFDF5" BorderBrush="#A7F3D0" BorderThickness="1" CornerRadius="10"
+                Padding="16,12" Margin="0,16,0,0"
+                Visibility="{Binding HasStatusMessage, Converter={StaticResource BoolToVis}}">
+            <TextBlock Text="{Binding StatusMessage}" Foreground="#065F46" FontWeight="SemiBold" FontSize="14"/>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="0,16,0,0" Visibility="{Binding HasSale, Converter={StaticResource BoolToVis}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="360"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="White" CornerRadius="14" BorderBrush="#E2E8F0" BorderThickness="1" Padding="24">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,16">
+                        <TextBlock Text="{Binding SaleHeaderText}" FontSize="18" FontWeight="Bold" Foreground="#0F172A"/>
+                        <TextBlock FontSize="12" Foreground="#94A3B8" Margin="0,4,0,0">
+                            <Run Text="{Binding SaleDateText, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding SalePaymentText, Mode=OneWay}"/>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <Grid Grid.Row="1" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2.2*"/>
+                            <ColumnDefinition Width="1.2*"/>
+                            <ColumnDefinition Width="1.2*"/>
+                            <ColumnDefinition Width="1*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="ТОВАР" Foreground="#94A3B8" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="ДОСТУПНО" Foreground="#94A3B8" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="2" Text="ДО ПОВЕРНЕННЯ" Foreground="#94A3B8" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="3" Text="СУМА" Foreground="#94A3B8" FontSize="11" FontWeight="SemiBold"/>
+                    </Grid>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Items}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="#F1F5F9" BorderThickness="0,0,0,1" Padding="0,12">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="2.2*"/>
+                                                <ColumnDefinition Width="1.2*"/>
+                                                <ColumnDefinition Width="1.2*"/>
+                                                <ColumnDefinition Width="1*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14" Foreground="#0F172A"/>
+                                                <TextBlock FontSize="12" Foreground="#94A3B8" Margin="0,2,0,0">
+                                                    <Run Text="{Binding Sku, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding UnitPriceText, Mode=OneWay}"/>
+                                                </TextBlock>
+                                            </StackPanel>
+
+                                            <TextBlock Grid.Column="1" Text="{Binding AvailabilityText}" FontSize="13" Foreground="#475569" VerticalAlignment="Center"/>
+
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Content="-" Width="28" Height="28" Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" Cursor="Hand"
+                                                        IsEnabled="{Binding CanReturn}"
+                                                        Style="{StaticResource RoundedButtonStyle}"
+                                                        Command="{Binding DataContext.DecreaseReturnQuantityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"/>
+                                                <TextBlock Text="{Binding QuantityToReturn}" FontWeight="Bold" FontSize="14" Foreground="#0F172A"
+                                                           VerticalAlignment="Center" Margin="12,0"/>
+                                                <Button Content="+" Width="28" Height="28" Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" Cursor="Hand"
+                                                        IsEnabled="{Binding CanReturn}"
+                                                        Style="{StaticResource RoundedButtonStyle}"
+                                                        Command="{Binding DataContext.IncreaseReturnQuantityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"/>
+                                            </StackPanel>
+
+                                            <TextBlock Grid.Column="3" Text="{Binding ReturnLineTotalText}" FontWeight="Bold" FontSize="14" Foreground="#0F172A" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Background="White" CornerRadius="14" BorderBrush="#E2E8F0" BorderThickness="1" Padding="24" Margin="16,0,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="Підсумок чека" FontSize="18" FontWeight="Bold" Foreground="#0F172A"/>
+                        <TextBlock Text="Після повернення товар знову стане «В наявності»" Foreground="#94A3B8" FontSize="12" Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Margin="0,20,0,0">
+                        <DockPanel Margin="0,0,0,10">
+                            <TextBlock DockPanel.Dock="Left" Text="Знижка по чеку" Foreground="#64748B" FontSize="13"/>
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding SaleDiscountText}" Foreground="#0F172A" FontSize="14"/>
+                        </DockPanel>
+                        <DockPanel Margin="0,0,0,10">
+                            <TextBlock DockPanel.Dock="Left" Text="Сума чека" Foreground="#64748B" FontSize="13"/>
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding SaleTotalText}" Foreground="#0F172A" FontWeight="SemiBold" FontSize="14"/>
+                        </DockPanel>
+                        <DockPanel Margin="0,0,0,16">
+                            <TextBlock DockPanel.Dock="Left" Text="Вже повернено" Foreground="#64748B" FontSize="13"/>
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding RefundedTotalText}" Foreground="#059669" FontWeight="Bold" FontSize="15"/>
+                        </DockPanel>
+                        <Border Height="1" Background="#E2E8F0" Margin="0,0,0,16"/>
+                        <DockPanel Margin="0,0,0,8">
+                            <TextBlock DockPanel.Dock="Left" Text="Обрано штук" Foreground="#64748B" FontSize="13"/>
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding SelectedReturnCount}" Foreground="#0F172A" FontWeight="SemiBold" FontSize="14"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Left" Text="Орієнтовно до повернення" Foreground="#0F172A" FontWeight="Bold" FontSize="14"/>
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding SelectedReturnSubtotalText}" Foreground="#0F172A" FontWeight="Bold" FontSize="16"/>
+                        </DockPanel>
+                    </StackPanel>
+
+                    <Button Grid.Row="3" Height="48" Background="#EF4444" BorderThickness="0" Cursor="Hand"
+                            Style="{StaticResource RoundedButtonStyle}" Command="{Binding ProcessReturnCommand}">
+                        <TextBlock Text="Оформити повернення" Foreground="White" FontWeight="SemiBold" FontSize="15"/>
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
