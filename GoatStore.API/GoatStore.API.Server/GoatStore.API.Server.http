@@ -64,6 +64,10 @@ Content-Type: application/json
 
 {
   "title": "Levi's 501 vintage, W32",
+  "brand": "Levi's",
+  "size": "32",
+  "category": "Штани",
+  "condition": 1,
   "purchasePrice": 400,
   "salePrice": 1200
 }
@@ -83,6 +87,10 @@ Content-Type: application/json
 
 {
   "title": "Levi's 501 vintage, W32 L34",
+  "brand": "Levi's",
+  "size": "32",
+  "category": "Штани",
+  "condition": 1,
   "purchasePrice": 400,
   "salePrice": 1100
 }
@@ -94,3 +102,102 @@ Authorization: Bearer {{login.response.body.$.accessToken}}
 ###
 DELETE {{HostAddress}}/api/products/{{createProduct.response.body.$.product.id}}
 Authorization: Bearer {{login.response.body.$.accessToken}}
+
+###
+# @name uniqueItem
+POST {{HostAddress}}/api/products
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "title": "Куртка Carhartt Detroit",
+  "brand": "Carhartt",
+  "size": "L",
+  "category": "Верхній одяг",
+  "condition": 1,
+  "purchasePrice": 1500,
+  "salePrice": 3200
+}
+
+###
+# @name stockedItem
+POST {{HostAddress}}/api/products
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "title": "Шкарпетки Nike Everyday",
+  "brand": "Nike",
+  "size": "M",
+  "category": "Аксесуари",
+  "condition": 0,
+  "isUnique": false,
+  "quantity": 10,
+  "purchasePrice": 80,
+  "salePrice": 200
+}
+
+###
+# @name sale
+POST {{HostAddress}}/api/sales
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "items": [
+    { "productId": "{{uniqueItem.response.body.$.product.id}}", "quantity": 1 },
+    { "productId": "{{stockedItem.response.body.$.product.id}}", "quantity": 3 }
+  ],
+  "paymentMethod": 0,
+  "discount": 100
+}
+
+###
+GET {{HostAddress}}/api/sales/{{sale.response.body.$.sale.number}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+###
+POST {{HostAddress}}/api/sales
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "items": [
+    { "productId": "{{uniqueItem.response.body.$.product.id}}", "quantity": 1 }
+  ],
+  "paymentMethod": 1,
+  "discount": 0
+}
+
+###
+POST {{HostAddress}}/api/sales/{{sale.response.body.$.sale.number}}/returns
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "items": [
+    { "saleItemId": "{{sale.response.body.$.sale.items[1].id}}", "quantity": 1 }
+  ]
+}
+
+###
+GET {{HostAddress}}/api/products/{{stockedItem.response.body.$.product.id}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+###
+GET {{HostAddress}}/api/reports/summary
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+###
+# @name sellerLogin
+POST {{HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "cashier@gmail.com",
+  "password": "password123"
+}
+
+###
+GET {{HostAddress}}/api/reports/summary
+Authorization: Bearer {{sellerLogin.response.body.$.accessToken}}

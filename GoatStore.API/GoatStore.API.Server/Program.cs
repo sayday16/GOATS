@@ -1,5 +1,7 @@
 ﻿using GoatStore.API.Server.Auth;
 using GoatStore.API.Server.Products;
+using GoatStore.API.Server.Reports;
+using GoatStore.API.Server.Sales;
 using GoatStore.Core.Interfaces;
 using GoatStore.Core.Services;
 using GoatStore.DataAccess;
@@ -18,6 +20,8 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<GoatStoreDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<ISaleService, SaleService>();
+builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddGoatAuth(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
@@ -29,6 +33,8 @@ app.UseAuthorization();
 
 app.MapAuthEndpoints();
 app.MapProductEndpoints();
+app.MapSaleEndpoints();
+app.MapReportEndpoints();
 app.MapDefaultEndpoints();
 app.UseFileServer();
 
