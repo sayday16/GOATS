@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using GoatStore.API.Server.Logging;
 using GoatStore.Core.DTOs;
 using GoatStore.Core.Interfaces;
 
@@ -10,12 +11,20 @@ namespace GoatStore.API.Server.Auth
         {
             var auth = app.MapGroup("/api/auth");
 
-            auth.MapPost("/register", async (RegisterRequestDto request, IAuthService authService, JwtTokenService tokens, CancellationToken cancellationToken) =>
-                    ToHttpResult(tokens.WithAccessToken(await authService.RegisterAsync(request, cancellationToken))))
+            auth.MapPost("/register", async (RegisterRequestDto request, IAuthService authService, JwtTokenService tokens, AuditLog audit, CancellationToken cancellationToken) =>
+                {
+                    var result = tokens.WithAccessToken(await authService.RegisterAsync(request, cancellationToken));
+                    audit.Registration(request.Email, result);
+                    return ToHttpResult(result);
+                })
                 .RequireRateLimiting(AuthSetup.AuthRateLimitPolicy);
 
-            auth.MapPost("/login", async (LoginRequestDto request, IAuthService authService, JwtTokenService tokens, CancellationToken cancellationToken) =>
-                    ToHttpResult(tokens.WithAccessToken(await authService.LoginAsync(request, cancellationToken))))
+            auth.MapPost("/login", async (LoginRequestDto request, IAuthService authService, JwtTokenService tokens, AuditLog audit, CancellationToken cancellationToken) =>
+                {
+                    var result = tokens.WithAccessToken(await authService.LoginAsync(request, cancellationToken));
+                    audit.Login(request.Email, result);
+                    return ToHttpResult(result);
+                })
                 .RequireRateLimiting(AuthSetup.AuthRateLimitPolicy);
 
             auth.MapGet("/me", async (ClaimsPrincipal user, IAuthService authService, CancellationToken cancellationToken) =>

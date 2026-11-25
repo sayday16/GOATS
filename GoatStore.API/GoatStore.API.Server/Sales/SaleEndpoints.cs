@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using GoatStore.API.Server.Auth;
+using GoatStore.API.Server.Logging;
 using GoatStore.Core.DTOs;
 using GoatStore.Core.Interfaces;
 
@@ -11,20 +12,30 @@ namespace GoatStore.API.Server.Sales
         {
             var sales = app.MapGroup("/api/sales").RequireAuthorization();
 
-            sales.MapPost("/", async (CreateSaleRequestDto request, ClaimsPrincipal user, ISaleService saleService, CancellationToken cancellationToken) =>
-                TryGetIds(user, out var storeId, out var userId)
-                    ? ToCreatedResult(await saleService.CreateAsync(storeId, userId, request, cancellationToken))
-                    : Results.Unauthorized());
+            sales.MapPost("/", async (CreateSaleRequestDto request, ClaimsPrincipal user, ISaleService saleService, AuditLog audit, CancellationToken cancellationToken) =>
+            {
+                if (!TryGetIds(user, out var storeId, out var userId))
+                    return Results.Unauthorized();
+
+                var result = await saleService.CreateAsync(storeId, userId, request, cancellationToken);
+                audit.Sale("created", user, null, result);
+                return ToCreatedResult(result);
+            });
 
             sales.MapGet("/{number:int}", async (int number, ClaimsPrincipal user, ISaleService saleService, CancellationToken cancellationToken) =>
                 TryGetIds(user, out var storeId, out _)
                     ? ToHttpResult(await saleService.GetByNumberAsync(storeId, number, cancellationToken))
                     : Results.Unauthorized());
 
-            sales.MapPost("/{number:int}/returns", async (int number, ReturnSaleRequestDto request, ClaimsPrincipal user, ISaleService saleService, CancellationToken cancellationToken) =>
-                TryGetIds(user, out var storeId, out _)
-                    ? ToHttpResult(await saleService.ReturnAsync(storeId, number, request, cancellationToken))
-                    : Results.Unauthorized());
+            sales.MapPost("/{number:int}/returns", async (int number, ReturnSaleRequestDto request, ClaimsPrincipal user, ISaleService saleService, AuditLog audit, CancellationToken cancellationToken) =>
+            {
+                if (!TryGetIds(user, out var storeId, out _))
+                    return Results.Unauthorized();
+
+                var result = await saleService.ReturnAsync(storeId, number, request, cancellationToken);
+                audit.Sale("returned", user, number, result);
+                return ToHttpResult(result);
+            });
 
             return app;
         }
