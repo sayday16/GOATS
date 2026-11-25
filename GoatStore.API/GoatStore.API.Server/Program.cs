@@ -1,5 +1,6 @@
 ﻿using GoatStore.API.Server.Auth;
 using GoatStore.API.Server.Errors;
+using GoatStore.API.Server.Logging;
 using GoatStore.API.Server.Products;
 using GoatStore.API.Server.Reports;
 using GoatStore.API.Server.Sales;
@@ -11,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.AddGoatLogging();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
@@ -28,6 +30,7 @@ builder.Services.AddGoatAuth(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 
+app.UseGoatRequestLogging();
 app.UseExceptionHandler();
 app.UseRateLimiter();
 app.UseAuthentication();

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using GoatStore.API.Server.Auth;
+using GoatStore.API.Server.Logging;
 using GoatStore.Core.DTOs;
 using GoatStore.Core.Interfaces;
 using GoatStore.DataAccess.Entities;
@@ -30,27 +31,47 @@ namespace GoatStore.API.Server.Products
                     ? ToHttpResult(await productService.GetAsync(storeId, id, cancellationToken))
                     : Results.Unauthorized());
 
-            products.MapPost("/{id:guid}/sell", async (Guid id, ClaimsPrincipal user, IProductService productService, CancellationToken cancellationToken) =>
-                TryGetStoreId(user, out var storeId)
-                    ? ToHttpResult(await productService.SellAsync(storeId, id, cancellationToken))
-                    : Results.Unauthorized());
+            products.MapPost("/{id:guid}/sell", async (Guid id, ClaimsPrincipal user, IProductService productService, AuditLog audit, CancellationToken cancellationToken) =>
+            {
+                if (!TryGetStoreId(user, out var storeId))
+                    return Results.Unauthorized();
 
-            products.MapPost("/", async (SaveProductRequestDto request, ClaimsPrincipal user, IProductService productService, CancellationToken cancellationToken) =>
-                    TryGetStoreId(user, out var storeId)
-                        ? ToCreatedResult(await productService.CreateAsync(storeId, request, cancellationToken))
-                        : Results.Unauthorized())
+                var result = await productService.SellAsync(storeId, id, cancellationToken);
+                audit.Product("sold", user, id, result);
+                return ToHttpResult(result);
+            });
+
+            products.MapPost("/", async (SaveProductRequestDto request, ClaimsPrincipal user, IProductService productService, AuditLog audit, CancellationToken cancellationToken) =>
+                {
+                    if (!TryGetStoreId(user, out var storeId))
+                        return Results.Unauthorized();
+
+                    var result = await productService.CreateAsync(storeId, request, cancellationToken);
+                    audit.Product("created", user, null, result);
+                    return ToCreatedResult(result);
+                })
                 .RequireAuthorization(AuthSetup.AdminOnlyPolicy);
 
-            products.MapPut("/{id:guid}", async (Guid id, SaveProductRequestDto request, ClaimsPrincipal user, IProductService productService, CancellationToken cancellationToken) =>
-                    TryGetStoreId(user, out var storeId)
-                        ? ToHttpResult(await productService.UpdateAsync(storeId, id, request, cancellationToken))
-                        : Results.Unauthorized())
+            products.MapPut("/{id:guid}", async (Guid id, SaveProductRequestDto request, ClaimsPrincipal user, IProductService productService, AuditLog audit, CancellationToken cancellationToken) =>
+                {
+                    if (!TryGetStoreId(user, out var storeId))
+                        return Results.Unauthorized();
+
+                    var result = await productService.UpdateAsync(storeId, id, request, cancellationToken);
+                    audit.Product("updated", user, id, result);
+                    return ToHttpResult(result);
+                })
                 .RequireAuthorization(AuthSetup.AdminOnlyPolicy);
 
-            products.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, IProductService productService, CancellationToken cancellationToken) =>
-                    TryGetStoreId(user, out var storeId)
-                        ? ToHttpResult(await productService.DeleteAsync(storeId, id, cancellationToken))
-                        : Results.Unauthorized())
+            products.MapDelete("/{id:guid}", async (Guid id, ClaimsPrincipal user, IProductService productService, AuditLog audit, CancellationToken cancellationToken) =>
+                {
+                    if (!TryGetStoreId(user, out var storeId))
+                        return Results.Unauthorized();
+
+                    var result = await productService.DeleteAsync(storeId, id, cancellationToken);
+                    audit.Product("deleted", user, id, result);
+                    return ToHttpResult(result);
+                })
                 .RequireAuthorization(AuthSetup.AdminOnlyPolicy);
 
             return app;
