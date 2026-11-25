@@ -8,4 +8,9 @@ namespace GoatStore.Core.Interfaces
         Task<SaleResponseDto> GetByNumberAsync(Guid storeId, int number, CancellationToken cancellationToken = default);
         Task<SaleResponseDto> ReturnAsync(Guid storeId, int number, ReturnSaleRequestDto request, CancellationToken cancellationToken = default);
     }
+
+    public interface IReportService
+    {
+        Task<ReportSummaryDto> GetSummaryAsync(Guid storeId, CancellationToken cancellationToken = default);
+    }
 }
