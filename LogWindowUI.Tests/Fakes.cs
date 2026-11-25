@@ -144,4 +144,46 @@ namespace LogWindowUI.Tests
         public Task<ProductResponseDto> DeleteAsync(Guid productId, CancellationToken cancellationToken = default) =>
             Task.FromResult(new ProductResponseDto { IsSuccess = true });
     }
+
+    public sealed class FakeSaleApiClient : ISaleApiClient
+    {
+        public SaleResponseDto CreateResponse { get; set; } = new() { IsSuccess = true, Sale = new SaleDto { Number = 1 } };
+        public SaleResponseDto GetResponse { get; set; } = new() { IsSuccess = true, Sale = new SaleDto { Number = 1 } };
+        public SaleResponseDto ReturnResponse { get; set; } = new() { IsSuccess = true, Sale = new SaleDto { Number = 1 } };
+        public Exception? Exception { get; set; }
+        public CreateSaleRequestDto? LastCreateRequest { get; private set; }
+        public int? LastRequestedNumber { get; private set; }
+        public ReturnSaleRequestDto? LastReturnRequest { get; private set; }
+
+        public Task<SaleResponseDto> CreateAsync(CreateSaleRequestDto request, CancellationToken cancellationToken = default)
+        {
+            LastCreateRequest = request;
+            return Respond(CreateResponse);
+        }
+
+        public Task<SaleResponseDto> GetByNumberAsync(int number, CancellationToken cancellationToken = default)
+        {
+            LastRequestedNumber = number;
+            return Respond(GetResponse);
+        }
+
+        public Task<SaleResponseDto> ReturnAsync(int number, ReturnSaleRequestDto request, CancellationToken cancellationToken = default)
+        {
+            LastRequestedNumber = number;
+            LastReturnRequest = request;
+            return Respond(ReturnResponse);
+        }
+
+        private Task<SaleResponseDto> Respond(SaleResponseDto response) =>
+            Exception is null ? Task.FromResult(response) : Task.FromException<SaleResponseDto>(Exception);
+    }
+
+    public sealed class FakeReportApiClient : IReportApiClient
+    {
+        public ReportSummaryDto Summary { get; set; } = new();
+        public Exception? Exception { get; set; }
+
+        public Task<ReportSummaryDto> GetSummaryAsync(CancellationToken cancellationToken = default) =>
+            Exception is null ? Task.FromResult(Summary) : Task.FromException<ReportSummaryDto>(Exception);
+    }
 }
