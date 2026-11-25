@@ -171,6 +171,10 @@
 
                         <DataGridTextColumn Header="Категорія" Binding="{Binding Category}" Width="140"/>
 
+                        <DataGridTextColumn Header="Залишок"
+                                            Binding="{Binding Quantity, StringFormat={}{0} шт.}"
+                                            Width="100"/>
+
                         <DataGridTextColumn Header="Ціна продажу"
                                             Binding="{Binding SalePrice, StringFormat={}{0:N2} ₴}"
                                             Width="130"/>
@@ -184,6 +188,9 @@
                                             <Style TargetType="Border">
                                                 <Setter Property="Background" Value="#D4EDDA"/>
                                                 <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsLowStock}" Value="True">
+                                                        <Setter Property="Background" Value="#FEF3C7"/>
+                                                    </DataTrigger>
                                                     <DataTrigger Binding="{Binding Status}" Value="Sold">
                                                         <Setter Property="Background" Value="#F0F0F0"/>
                                                     </DataTrigger>
@@ -196,6 +203,10 @@
                                                     <Setter Property="Text" Value="В наявності"/>
                                                     <Setter Property="Foreground" Value="#155724"/>
                                                     <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsLowStock}" Value="True">
+                                                            <Setter Property="Text" Value="Мало"/>
+                                                            <Setter Property="Foreground" Value="#B45309"/>
+                                                        </DataTrigger>
                                                         <DataTrigger Binding="{Binding Status}" Value="Sold">
                                                             <Setter Property="Text" Value="Продано"/>
                                                             <Setter Property="Foreground" Value="#6C757D"/>

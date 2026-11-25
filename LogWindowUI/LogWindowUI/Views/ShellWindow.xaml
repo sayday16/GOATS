@@ -27,6 +27,10 @@
             <DataTemplate DataType="{x:Type vm:ReturnsViewModel}">
                 <views:ReturnsView/>
             </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:AnalyticsViewModel}">
+                <views:AnalyticsView/>
+            </DataTemplate>
         </ResourceDictionary>
     </Window.Resources>
 
@@ -54,6 +58,7 @@
                 <StackPanel Grid.Row="1" Margin="12,0">
 
                     <Button Command="{Binding ShowInventoryCommand}"
+                            Visibility="{Binding IsAdmin, Converter={StaticResource BoolVis}}"
                             Margin="0,4" Cursor="Hand"
                             Background="Transparent" BorderThickness="0"
                             HorizontalContentAlignment="Left">
@@ -79,16 +84,12 @@
                                 </Setter>
                             </Style>
                         </Button.Style>
-                        <Border x:Name="InventoryNav"
-                                Background="{Binding IsInventoryActive, Converter={StaticResource BoolVis}}"
-                                CornerRadius="8" Padding="0">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="📦" FontSize="18" VerticalAlignment="Center"/>
-                                <TextBlock Text="Склад" Foreground="White" FontSize="14"
-                                           FontWeight="SemiBold" Margin="10,0,0,0"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📦" FontSize="18" VerticalAlignment="Center"/>
+                            <TextBlock Text="Склад" Foreground="White" FontSize="14"
+                                       FontWeight="SemiBold" Margin="10,0,0,0"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
                     </Button>
 
                     <Button Command="{Binding ShowPosCommand}"
@@ -155,6 +156,39 @@
                         </StackPanel>
                     </Button>
 
+                    <Button Command="{Binding ShowAnalyticsCommand}"
+                            Visibility="{Binding IsAdmin, Converter={StaticResource BoolVis}}"
+                            Margin="0,4" Cursor="Hand">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="Bg" CornerRadius="8"
+                                                    Background="{TemplateBinding Background}"
+                                                    Padding="12,10">
+                                                <ContentPresenter/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bg" Property="Background" Value="#1E3A5F"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Button.Style>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📊" FontSize="18" VerticalAlignment="Center"/>
+                            <TextBlock Text="Аналітика" Foreground="White" FontSize="14"
+                                       FontWeight="SemiBold" Margin="10,0,0,0"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
                 </StackPanel>
 
                 <Border Grid.Row="2" Margin="12,0,12,20" Background="#1E3A5F"
@@ -165,6 +199,22 @@
                                    TextTrimming="CharacterEllipsis"/>
                         <TextBlock Text="{Binding UserRole}" Foreground="#8B92A1"
                                    FontSize="11" Margin="0,2,0,0"/>
+                        <Button Content="Вийти" Command="{Binding LogoutCommand}"
+                                Margin="0,8,0,0" Height="28" FontSize="12"
+                                Background="Transparent" Foreground="#FCA5A5"
+                                BorderBrush="#EF4444" BorderThickness="1"
+                                Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="6">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
                     </StackPanel>
                 </Border>
             </Grid>

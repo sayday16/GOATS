@@ -1,5 +1,7 @@
+using System;
 using GoatStore.Core.DTOs;
 using GoatStore.DataAccess.Entities;
+using LogWindowUI.Services;
 using LogWindowUI.ViewModels;
 
 namespace LogWindowUI.Tests
@@ -103,7 +105,8 @@ namespace LogWindowUI.Tests
 
             vm.ShowInventoryCommand.Execute(null);
 
-            Assert.Equal(ProductStatus.Sold, Assert.IsType<InventoryViewModel>(vm.CurrentView).Products.Single().Status);
+            var inventory = (InventoryViewModel)vm.CurrentView!;
+            Assert.Equal(ProductStatus.Sold, inventory.Products.Single().Status);
         }
 
         [Fact]
@@ -183,6 +186,119 @@ namespace LogWindowUI.Tests
             var vm = CreateViewModel();
 
             Assert.Equal("Goat Store Kyiv", vm.StoreName);
+        }
+
+        [Fact]
+        public void Constructor_WhenRoleIsSeller_SetsIsAdminFalse()
+        {
+            var auth = new AuthResponseDto { Role = UserRole.Seller };
+            var vm = new ShellViewModel(auth, _api);
+
+            Assert.False(vm.IsAdmin);
+        }
+
+        [Fact]
+        public void Constructor_WhenRoleIsSeller_SetsPosActive()
+        {
+            var auth = new AuthResponseDto { Role = UserRole.Seller };
+            var vm = new ShellViewModel(auth, _api);
+
+            Assert.True(vm.IsPosActive);
+        }
+
+        [Fact]
+        public void Constructor_WhenRoleIsSeller_SetsInventoryInactive()
+        {
+            var auth = new AuthResponseDto { Role = UserRole.Seller };
+            var vm = new ShellViewModel(auth, _api);
+
+            Assert.False(vm.IsInventoryActive);
+        }
+
+        [Fact]
+        public void Constructor_WhenRoleIsSeller_SetsCurrentViewToMainViewModel()
+        {
+            var auth = new AuthResponseDto { Role = UserRole.Seller };
+            var vm = new ShellViewModel(auth, _api);
+
+            Assert.IsType<MainViewModel>(vm.CurrentView);
+        }
+
+        [Fact]
+        public void Constructor_WhenRoleIsAdmin_SetsIsAdminTrue()
+        {
+            var vm = CreateViewModel();
+
+            Assert.True(vm.IsAdmin);
+        }
+
+        [Fact]
+        public void ShowAnalyticsCommand_SetsAnalyticsActive()
+        {
+            var vm = CreateViewModel();
+
+            vm.ShowAnalyticsCommand.Execute(null);
+
+            Assert.True(vm.IsAnalyticsActive);
+        }
+
+        [Fact]
+        public void ShowAnalyticsCommand_SetsInventoryInactive()
+        {
+            var vm = CreateViewModel();
+
+            vm.ShowAnalyticsCommand.Execute(null);
+
+            Assert.False(vm.IsInventoryActive);
+        }
+
+        [Fact]
+        public void ShowAnalyticsCommand_SetsPosInactive()
+        {
+            var vm = CreateViewModel();
+            vm.ShowPosCommand.Execute(null);
+
+            vm.ShowAnalyticsCommand.Execute(null);
+
+            Assert.False(vm.IsPosActive);
+        }
+
+        [Fact]
+        public void ShowAnalyticsCommand_SetsCurrentViewToAnalyticsViewModel()
+        {
+            var vm = CreateViewModel();
+
+            vm.ShowAnalyticsCommand.Execute(null);
+
+            Assert.IsType<AnalyticsViewModel>(vm.CurrentView);
+        }
+
+        [Fact]
+        public void ShowAnalyticsCommand_Twice_ReusesAnalyticsViewModel()
+        {
+            var vm = CreateViewModel();
+            vm.ShowAnalyticsCommand.Execute(null);
+            var analytics = vm.CurrentView;
+            vm.ShowPosCommand.Execute(null);
+
+            vm.ShowAnalyticsCommand.Execute(null);
+
+            Assert.Same(analytics, vm.CurrentView);
+        }
+
+        [Fact]
+        public void LogoutCommand_ClearsAuthSession()
+        {
+            AuthSession.Start(new AuthResponseDto
+            {
+                AccessToken = "test-token",
+                AccessTokenExpiresAt = DateTime.UtcNow.AddHours(1)
+            });
+            var vm = CreateViewModel();
+
+            vm.LogoutCommand.Execute(null);
+
+            Assert.False(AuthSession.IsActive);
         }
     }
 }

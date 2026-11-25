@@ -13,6 +13,7 @@ namespace LogWindowUI.ViewModels
     public class InventoryViewModel : INotifyPropertyChanged
     {
         private readonly IProductApiClient _productApiClient;
+        private readonly ISaleApiClient _saleApiClient;
 
         private ObservableCollection<ProductDto> _products = new();
         private string? _searchText;
@@ -65,9 +66,10 @@ namespace LogWindowUI.ViewModels
         public ICommand RefreshCommand { get; }
         public ICommand SellCommand { get; }
 
-        public InventoryViewModel(IProductApiClient productApiClient)
+        public InventoryViewModel(IProductApiClient productApiClient, ISaleApiClient? saleApiClient = null)
         {
             _productApiClient = productApiClient;
+            _saleApiClient = saleApiClient ?? App.CreateSaleApiClient();
 
             SearchCommand = new RelayCommand(_ => LoadProductsAsync());
             ResetCommand = new RelayCommand(_ => ResetFilter());
@@ -83,7 +85,6 @@ namespace LogWindowUI.ViewModels
             LoadFilterOptionsAsync();
         }
 
-        // Товари могли продати на касі, поки склад був відкритий
         public void Refresh() => LoadProductsAsync();
 
         private async void LoadProductsAsync()
@@ -123,7 +124,6 @@ namespace LogWindowUI.ViewModels
             }
             catch
             {
-                
                 Categories.Clear();
                 foreach (var c in new[] { "(Всі)", "Одяг", "Взуття", "Аксесуари", "Верхній одяг" })
                     Categories.Add(c);
@@ -156,11 +156,21 @@ namespace LogWindowUI.ViewModels
             ErrorMessage = null;
             try
             {
-                var result = await _productApiClient.SellAsync(product.Id);
+                var request = new CreateSaleRequestDto
+                {
+                    Items = [new CreateSaleItemDto { ProductId = product.Id, Quantity = 1 }],
+                    PaymentMethod = PaymentMethod.Card,
+                    Discount = 0
+                };
+                var result = await _saleApiClient.CreateAsync(request);
                 if (result.IsSuccess)
+                {
                     LoadProductsAsync();
+                }
                 else
+                {
                     ErrorMessage = result.Message;
+                }
             }
             catch (Exception ex)
             {
