@@ -672,6 +672,71 @@ namespace GoatStore.Core.Tests
             Assert.Equal(ProductError.NotFound, result.Error);
         }
 
+        private (Store Store, Product Product, ProductService Service) ProductSoldBeforeCommand(string commandStart)
+        {
+            var store = _db.AddStore();
+            var product = _db.AddProduct(store.Id);
+            var interceptor = new BeforeCommandInterceptor(commandStart, () =>
+            {
+                using var other = _db.CreateContext();
+                var sold = other.Products.Single(p => p.Id == product.Id);
+                sold.Quantity = 0;
+                sold.Status = ProductStatus.Sold;
+                other.SaveChanges();
+            });
+            return (store, product, new ProductService(_db.CreateContext(interceptor), new FixedTimeProvider(Now)));
+        }
+
+        [Fact]
+        public async Task UpdateAsync_ProductSoldMeanwhile_ReturnsConflict()
+        {
+            var (store, product, service) = ProductSoldBeforeCommand("UPDATE");
+
+            var result = await service.UpdateAsync(store.Id, product.Id, ValidRequest("New title"));
+
+            Assert.Equal(ProductError.Conflict, result.Error);
+        }
+
+        [Fact]
+        public async Task UpdateAsync_ProductSoldMeanwhile_KeepsItSold()
+        {
+            var (store, product, service) = ProductSoldBeforeCommand("UPDATE");
+
+            await service.UpdateAsync(store.Id, product.Id, ValidRequest("New title"));
+
+            Assert.Equal(ProductStatus.Sold, Query(c => c.Products.Single(p => p.Id == product.Id).Status));
+        }
+
+        [Fact]
+        public async Task UpdateAsync_ProductSoldMeanwhile_KeepsOldTitle()
+        {
+            var (store, product, service) = ProductSoldBeforeCommand("UPDATE");
+
+            await service.UpdateAsync(store.Id, product.Id, ValidRequest("New title"));
+
+            Assert.Equal("Test Product", Query(c => c.Products.Single(p => p.Id == product.Id).Title));
+        }
+
+        [Fact]
+        public async Task DeleteAsync_ProductSoldMeanwhile_ReturnsConflict()
+        {
+            var (store, product, service) = ProductSoldBeforeCommand("DELETE");
+
+            var result = await service.DeleteAsync(store.Id, product.Id);
+
+            Assert.Equal(ProductError.Conflict, result.Error);
+        }
+
+        [Fact]
+        public async Task DeleteAsync_ProductSoldMeanwhile_KeepsIt()
+        {
+            var (store, product, service) = ProductSoldBeforeCommand("DELETE");
+
+            await service.DeleteAsync(store.Id, product.Id);
+
+            Assert.Single(Query(c => c.Products.Where(p => p.Id == product.Id).ToList()));
+        }
+
         private async Task<(Store Store, Product Product)> SellAndReturnAsync()
         {
             var store = _db.AddStore();
