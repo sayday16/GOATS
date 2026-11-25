@@ -8,6 +8,8 @@ namespace GoatStore.DataAccess
         public DbSet<User> Users { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<Store> Stores { get; set; }
+        public DbSet<Sale> Sales { get; set; }
+        public DbSet<SaleItem> SaleItems { get; set; }
 
         public GoatStoreDbContext(DbContextOptions<GoatStoreDbContext> options)
             : base(options)
@@ -47,6 +49,45 @@ namespace GoatStore.DataAccess
                     .HasFilter("\"Sku\" IS NOT NULL");
 
                 entity.HasIndex(p => new { p.StoreId, p.Status });
+                entity.HasIndex(p => new { p.StoreId, p.Quantity });
+            });
+
+            modelBuilder.Entity<Sale>(entity =>
+            {
+                entity.Property(s => s.Id).ValueGeneratedOnAdd();
+                entity.Property(s => s.PaymentMethod).HasConversion<string>().HasMaxLength(20);
+                entity.Property(s => s.Channel).HasMaxLength(50);
+                entity.Property(s => s.Discount).HasPrecision(18, 2);
+
+                entity.HasIndex(s => new { s.StoreId, s.Number }).IsUnique();
+                entity.HasIndex(s => new { s.StoreId, s.CreatedAt });
+
+                entity.HasOne(s => s.Store)
+                    .WithMany()
+                    .HasForeignKey(s => s.StoreId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(s => s.SoldBy)
+                    .WithMany()
+                    .HasForeignKey(s => s.SoldByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(s => s.Items)
+                    .WithOne(i => i.Sale)
+                    .HasForeignKey(i => i.SaleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<SaleItem>(entity =>
+            {
+                entity.Property(i => i.Id).ValueGeneratedOnAdd();
+                entity.Property(i => i.UnitPrice).HasPrecision(18, 2);
+                entity.Property(i => i.PurchasePrice).HasPrecision(18, 2);
+
+                entity.HasOne(i => i.Product)
+                    .WithMany()
+                    .HasForeignKey(i => i.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Store>(entity =>
@@ -54,6 +95,7 @@ namespace GoatStore.DataAccess
                 entity.Property(s => s.Id).ValueGeneratedOnAdd();
                 entity.Property(s => s.Name).HasMaxLength(100);
                 entity.Property(s => s.NormalizedName).HasMaxLength(100);
+                entity.Property(s => s.AnnualTurnoverLimit).HasPrecision(18, 2);
 
                 entity.HasIndex(s => s.NormalizedName).IsUnique();
 

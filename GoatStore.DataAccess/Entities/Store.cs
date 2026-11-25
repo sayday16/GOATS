@@ -10,6 +10,8 @@
 
         public string StorePasswordHash { get; set; } = string.Empty;
 
+        public decimal AnnualTurnoverLimit { get; set; } = 1_000_000m;
+
         public List<User> Users { get; set; } = new();
         public List<Product> Products { get; set; } = new();
     }

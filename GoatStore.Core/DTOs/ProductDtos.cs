@@ -13,6 +13,8 @@ namespace GoatStore.Core.DTOs
         public string? Sku { get; set; }
         public decimal PurchasePrice { get; set; }
         public decimal SalePrice { get; set; }
+        public bool IsUnique { get; set; } = true;
+        public int Quantity { get; set; } = 1;
     }
 
     public class ProductFilterDto
@@ -35,6 +37,10 @@ namespace GoatStore.Core.DTOs
         public decimal PurchasePrice { get; set; }
         public decimal SalePrice { get; set; }
         public ProductStatus Status { get; set; }
+        public bool IsUnique { get; set; } = true;
+        public int Quantity { get; set; }
+        public int ReservedQuantity { get; set; }
+        public int LowStockThreshold { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? SoldDate { get; set; }
     }

@@ -21,6 +21,10 @@ namespace LogWindowUI
 
         public static IProductApiClient CreateProductApiClient() => new ProductApiClient(ApiHttpClient);
 
+        public static ISaleApiClient CreateSaleApiClient() => new SaleApiClient(ApiHttpClient);
+
+        public static IReportApiClient CreateReportApiClient() => new ReportApiClient(ApiHttpClient);
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
