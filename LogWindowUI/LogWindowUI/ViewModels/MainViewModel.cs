@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -70,6 +71,10 @@ namespace LogWindowUI.ViewModels
         private decimal _discount = 0m;
         private string _discountInput = string.Empty;
         private string _searchText = string.Empty;
+        private bool _isSuggestionsOpen;
+        private string _suggestionsMessage = string.Empty;
+        private Task<bool>? _availableProductsLoad;
+        private IReadOnlyList<ProductDto> _availableProducts = Array.Empty<ProductDto>();
         private string _cashierName = "Олена Коваль";
         private string _shiftInfo = "З 09:00 · 6 год 24 хв";
         private string _storeLocation = "Київ · Центр";
@@ -117,7 +122,41 @@ namespace LogWindowUI.ViewModels
         public string StoreLocation { get => _storeLocation; set { _storeLocation = value; OnPropertyChanged(); } }
         public string CashRegister { get => _cashRegister; set { _cashRegister = value; OnPropertyChanged(); } }
         public string ReceiptNumber { get => _receiptNumber; set { _receiptNumber = value; OnPropertyChanged(); } }
-        public string SearchText { get => _searchText; set { _searchText = value; OnPropertyChanged(); } }
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                _searchText = value;
+                OnPropertyChanged();
+
+                if (string.IsNullOrWhiteSpace(value))
+                    IsSuggestionsOpen = false;
+                else
+                    _ = ShowSuggestionsAsync(reload: false);
+            }
+        }
+
+        public ObservableCollection<ProductDto> Suggestions { get; } = new();
+
+        public bool IsSuggestionsOpen
+        {
+            get => _isSuggestionsOpen;
+            set { if (_isSuggestionsOpen != value) { _isSuggestionsOpen = value; OnPropertyChanged(); } }
+        }
+
+        public string SuggestionsMessage
+        {
+            get => _suggestionsMessage;
+            private set
+            {
+                _suggestionsMessage = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasSuggestionsMessage));
+            }
+        }
+
+        public bool HasSuggestionsMessage => !string.IsNullOrEmpty(SuggestionsMessage);
         public string DiscountInput { get => _discountInput; set { _discountInput = value; OnPropertyChanged(); } }
 
         public bool IsCardPayment
@@ -190,6 +229,10 @@ namespace LogWindowUI.ViewModels
         public ICommand DecreaseQuantityCommand { get; }
         public ICommand CheckoutCommand { get; }
         public ICommand SearchCommand { get; }
+        public ICommand OpenSuggestionsCommand { get; }
+        public ICommand AddSuggestionCommand { get; }
+
+        private const int MaxSuggestions = 30;
 
         public MainViewModel(
             AuthResponseDto? authResponse,
@@ -240,6 +283,8 @@ namespace LogWindowUI.ViewModels
             });
 
             SearchCommand = new RelayCommand(async _ => await SearchProductAsync());
+            OpenSuggestionsCommand = new RelayCommand(async _ => await ShowSuggestionsAsync(reload: true));
+            AddSuggestionCommand = new RelayCommand(p => { if (p is ProductDto product) AddToCart(product); });
             CheckoutCommand = new RelayCommand(async _ => await ProcessCheckoutAsync());
 
             CartItems = new ObservableCollection<CartItemViewModel>();
@@ -327,44 +372,90 @@ namespace LogWindowUI.ViewModels
 
                 productDto ??= results[0];
 
-                bool alreadyInCart = false;
-                foreach (var item in CartItems)
-                {
-                    if (item.Id == productDto.Id)
-                    {
-                        alreadyInCart = true;
-                        break;
-                    }
-                }
-
-                if (alreadyInCart)
-                {
-                    _dialogService.ShowInfo("Увага", "Цей товар вже додано в чек!");
-                    return;
-                }
-
-                CartItems.Add(new CartItemViewModel
-                {
-                    Id = productDto.Id,
-                    Title = productDto.Title,
-                    Brand = productDto.Brand,
-                    Size = productDto.Size,
-                    Category = productDto.Category,
-                    Condition = productDto.Condition.ToString(),
-                    Sku = productDto.Sku ?? string.Empty,
-                    SalePrice = productDto.SalePrice,
-                    Status = productDto.Status.ToString(),
-                    IsUnique = productDto.IsUnique,
-                    MaxQuantity = productDto.IsUnique ? 1 : Math.Max(1, productDto.Quantity),
-                    IconKind = GetIconForCategory(productDto.Category)
-                });
-
-                SearchText = string.Empty;
+                AddToCart(productDto);
             }
             catch (Exception ex)
             {
                 _dialogService.ShowError("Помилка", $"Помилка зв'язку з сервером: {ex.Message}");
             }
+        }
+
+        private async Task ShowSuggestionsAsync(bool reload)
+        {
+            if (reload)
+                _availableProductsLoad = null;
+
+            _availableProductsLoad ??= LoadAvailableProductsAsync();
+            var loaded = await _availableProductsLoad;
+
+            if (!loaded)
+            {
+                _availableProductsLoad = null;
+                Suggestions.Clear();
+                SuggestionsMessage = "Не вдалося завантажити товари. Перевірте зв'язок із сервером.";
+                IsSuggestionsOpen = true;
+                return;
+            }
+
+            var query = SearchText.Trim();
+            var matches = _availableProducts
+                .Where(p => !CartItems.Any(i => i.Id == p.Id))
+                .Where(p => query.Length == 0
+                    || p.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
+                    || p.Brand.Contains(query, StringComparison.OrdinalIgnoreCase)
+                    || (p.Sku ?? string.Empty).Contains(query, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(p => p.Title, StringComparer.CurrentCultureIgnoreCase)
+                .Take(MaxSuggestions)
+                .ToList();
+
+            Suggestions.Clear();
+            foreach (var product in matches)
+                Suggestions.Add(product);
+
+            SuggestionsMessage = matches.Count == 0 ? "Нічого не знайдено серед товарів у наявності." : string.Empty;
+            IsSuggestionsOpen = true;
+        }
+
+        private async Task<bool> LoadAvailableProductsAsync()
+        {
+            try
+            {
+                _availableProducts = await _productApiClient.GetAllAsync(new ProductFilterDto { Status = ProductStatus.InStock });
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        private void AddToCart(ProductDto productDto)
+        {
+            IsSuggestionsOpen = false;
+
+            if (CartItems.Any(i => i.Id == productDto.Id))
+            {
+                _dialogService.ShowInfo("Увага", "Цей товар вже додано в чек!");
+                return;
+            }
+
+            CartItems.Add(new CartItemViewModel
+            {
+                Id = productDto.Id,
+                Title = productDto.Title,
+                Brand = productDto.Brand,
+                Size = productDto.Size,
+                Category = productDto.Category,
+                Condition = productDto.Condition.ToString(),
+                Sku = productDto.Sku ?? string.Empty,
+                SalePrice = productDto.SalePrice,
+                Status = productDto.Status.ToString(),
+                IsUnique = productDto.IsUnique,
+                MaxQuantity = productDto.IsUnique ? 1 : Math.Max(1, productDto.Quantity),
+                IconKind = GetIconForCategory(productDto.Category)
+            });
+
+            SearchText = string.Empty;
         }
 
         private async Task ProcessCheckoutAsync()
@@ -421,6 +512,7 @@ namespace LogWindowUI.ViewModels
                 string paymentMethod = IsCardPayment ? "Картка" : "Готівка";
 
                 ReceiptNumber = $"Чек #{saleNumber}";
+                _availableProductsLoad = null;
                 CartItems.Clear();
                 Discount = 0m;
                 DiscountInput = string.Empty;
