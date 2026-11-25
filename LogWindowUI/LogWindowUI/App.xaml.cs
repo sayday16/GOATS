@@ -1,5 +1,7 @@
 ﻿using System.Net.Http;
 using System.Windows;
+using System.Windows.Threading;
+using Serilog;
 using GoatStore.Core.Interfaces;
 using LogWindowUI.ViewModels;
 using LogWindowUI.Views;
@@ -29,6 +31,16 @@ namespace LogWindowUI
         {
             base.OnStartup(e);
 
+            AppLog.Start(ApiHttpClient.BaseAddress!.ToString());
+            DispatcherUnhandledException += OnDispatcherUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+                Log.Fatal(args.ExceptionObject as Exception, "Unhandled exception, application is terminating");
+            TaskScheduler.UnobservedTaskException += (_, args) =>
+            {
+                Log.Error(args.Exception, "Unobserved task exception");
+                args.SetObserved();
+            };
+
             IAuthService authService = CreateAuthService();
             var loginViewModel = new LoginViewModel(authService);
             var loginWindow = new LoginView
@@ -37,6 +49,19 @@ namespace LogWindowUI
             };
 
             loginWindow.Show();
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            AppLog.Stop();
+            base.OnExit(e);
+        }
+
+        private static void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+        {
+            Log.Error(e.Exception, "Unhandled UI exception");
+            MessageBox.Show(AppLog.UnexpectedErrorMessage, "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+            e.Handled = true;
         }
     }
 }

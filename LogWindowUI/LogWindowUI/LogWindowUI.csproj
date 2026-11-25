@@ -13,4 +13,9 @@
 		<ProjectReference Include="..\..\GoatStore.DataAccess\GoatStore.DataAccess.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <PackageReference Include="Serilog" Version="4.4.0" />
+	  <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+	</ItemGroup>
+
 </Project>
