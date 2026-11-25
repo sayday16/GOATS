@@ -1,4 +1,5 @@
 ﻿using GoatStore.API.Server.Auth;
+using GoatStore.API.Server.Errors;
 using GoatStore.API.Server.Products;
 using GoatStore.API.Server.Reports;
 using GoatStore.API.Server.Sales;
@@ -12,6 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException(
