@@ -14,6 +14,7 @@ namespace GoatStore.Core.Services
         public const int MaxCategoryLength = 100;
         public const int MaxSkuLength = 50;
         public const decimal MaxPrice = 10_000_000m;
+        public const int MaxQuantity = 100_000;
 
         private readonly GoatStoreDbContext _context;
         private readonly TimeProvider _timeProvider;
@@ -121,7 +122,7 @@ namespace GoatStore.Core.Services
             if (product is null)
                 return NotFound();
 
-            if (product.Status == ProductStatus.Sold)
+            if (product.Status == ProductStatus.Sold && product.IsUnique)
                 return Fail(ProductError.Conflict, "Проданий товар не можна змінювати.");
 
             if (await SkuTakenAsync(storeId, fields.Sku, exceptProductId: productId, cancellationToken))
@@ -139,20 +140,17 @@ namespace GoatStore.Core.Services
         {
             var soldAt = _timeProvider.GetUtcNow().UtcDateTime;
 
-            var updated = await _context.Products
-                .Where(p => p.Id == productId && p.StoreId == storeId && p.Status == ProductStatus.InStock)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(p => p.Status, ProductStatus.Sold)
-                    .SetProperty(p => p.SoldDate, soldAt),
-                    cancellationToken);
+            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            var taken = await StockUpdates.TryTakeAsync(_context, storeId, productId, 1, soldAt, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
 
             var product = await FindAsync(storeId, productId, tracking: false, cancellationToken);
             if (product is null)
                 return NotFound();
 
-            return updated == 0
-                ? Fail(ProductError.Conflict, "Цей товар уже продано.")
-                : Success(product, "Товар продано.");
+            return taken
+                ? Success(product, "Товар продано.")
+                : Fail(ProductError.Conflict, "Цей товар уже продано.");
         }
 
         public async Task<ProductResponseDto> DeleteAsync(
@@ -162,7 +160,7 @@ namespace GoatStore.Core.Services
             if (product is null)
                 return NotFound();
 
-            if (product.Status == ProductStatus.Sold)
+            if (product.Status == ProductStatus.Sold || await _context.SaleItems.AnyAsync(i => i.ProductId == productId, cancellationToken))
                 return Fail(ProductError.Conflict, "Проданий товар не можна видалити: він потрібен для звітів.");
 
             _context.Products.Remove(product);
@@ -202,6 +200,9 @@ namespace GoatStore.Core.Services
             product.Condition = request.Condition;
             product.PurchasePrice = request.PurchasePrice;
             product.SalePrice = request.SalePrice;
+            product.IsUnique = request.IsUnique;
+            product.Quantity = request.Quantity;
+            product.Status = request.Quantity > 0 ? ProductStatus.InStock : ProductStatus.Sold;
         }
 
         private Task<bool> SkuTakenAsync(Guid storeId, string? sku, Guid? exceptProductId, CancellationToken cancellationToken)
@@ -250,6 +251,12 @@ namespace GoatStore.Core.Services
             if (!Enum.IsDefined(request.Condition))
                 return "Оберіть стан товару: новий або вживаний.";
 
+            if (request.Quantity < 1 || request.Quantity > MaxQuantity)
+                return $"Кількість має бути від 1 до {MaxQuantity}.";
+
+            if (request.IsUnique && request.Quantity != 1)
+                return "Унікальна річ може бути лише в одному екземплярі.";
+
             if (request.PurchasePrice < 0 || request.SalePrice < 0)
                 return "Ціна не може бути від'ємною.";
 
@@ -271,6 +278,10 @@ namespace GoatStore.Core.Services
             PurchasePrice = product.PurchasePrice,
             SalePrice = product.SalePrice,
             Status = product.Status,
+            IsUnique = product.IsUnique,
+            Quantity = product.Quantity,
+            ReservedQuantity = product.ReservedQuantity,
+            LowStockThreshold = product.LowStockThreshold,
             CreatedAt = product.CreatedAt,
             SoldDate = product.SoldDate
         };

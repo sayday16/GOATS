@@ -671,5 +671,102 @@ namespace GoatStore.Core.Tests
 
             Assert.Equal(ProductError.NotFound, result.Error);
         }
+
+        private async Task<(Store Store, Product Product)> SellAndReturnAsync()
+        {
+            var store = _db.AddStore();
+            var user = _db.AddUser(store.Id);
+            var product = _db.AddProduct(store.Id);
+            var sales = new SaleService(_db.CreateContext(), new FixedTimeProvider(Now));
+            var sale = (await sales.CreateAsync(store.Id, user.Id,
+                new CreateSaleRequestDto { Items = [new CreateSaleItemDto { ProductId = product.Id }] })).Sale!;
+            await sales.ReturnAsync(store.Id, sale.Number,
+                new ReturnSaleRequestDto { Items = [new ReturnItemDto { SaleItemId = sale.Items[0].Id }] });
+            return (store, product);
+        }
+
+        [Fact]
+        public async Task DeleteAsync_ReturnedProductWithSaleHistory_ReturnsConflict()
+        {
+            var (store, product) = await SellAndReturnAsync();
+
+            var result = await CreateService().DeleteAsync(store.Id, product.Id);
+
+            Assert.Equal(ProductError.Conflict, result.Error);
+        }
+
+        [Fact]
+        public async Task CreateAsync_StockedProduct_SavesQuantity()
+        {
+            var result = await CreateWithChangeAsync(r =>
+            {
+                r.IsUnique = false;
+                r.Quantity = 12;
+            });
+
+            Assert.Equal(12, result.Product?.Quantity);
+        }
+
+        [Fact]
+        public async Task CreateAsync_StockedProduct_IsNotUnique()
+        {
+            var result = await CreateWithChangeAsync(r =>
+            {
+                r.IsUnique = false;
+                r.Quantity = 12;
+            });
+
+            Assert.False(result.Product?.IsUnique);
+        }
+
+        [Fact]
+        public async Task CreateAsync_DefaultRequest_CreatesUniqueProductWithOneItem()
+        {
+            var result = await CreateWithChangeAsync(_ => { });
+
+            Assert.Equal((true, 1), (result.Product?.IsUnique, result.Product?.Quantity));
+        }
+
+        [Fact]
+        public async Task CreateAsync_UniqueProductWithTwoItems_ReturnsValidationError()
+        {
+            var result = await CreateWithChangeAsync(r => r.Quantity = 2);
+
+            Assert.Equal(ProductError.Validation, result.Error);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-3)]
+        [InlineData(100_001)]
+        public async Task CreateAsync_QuantityOutOfRange_ReturnsValidationError(int quantity)
+        {
+            var result = await CreateWithChangeAsync(r =>
+            {
+                r.IsUnique = false;
+                r.Quantity = quantity;
+            });
+
+            Assert.Equal(ProductError.Validation, result.Error);
+        }
+
+        [Fact]
+        public async Task UpdateAsync_SoldOutStockedProduct_AllowsRestock()
+        {
+            var store = _db.AddStore();
+            var product = _db.AddProduct(store.Id, status: ProductStatus.Sold);
+            using (var context = _db.CreateContext())
+            {
+                context.Products.Single(p => p.Id == product.Id).IsUnique = false;
+                context.SaveChanges();
+            }
+            var request = ValidRequest();
+            request.IsUnique = false;
+            request.Quantity = 10;
+
+            var result = await CreateService().UpdateAsync(store.Id, product.Id, request);
+
+            Assert.Equal(ProductStatus.InStock, result.Product?.Status);
+        }
     }
 }
