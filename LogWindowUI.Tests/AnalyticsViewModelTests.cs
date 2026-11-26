@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Net.Http;
 using GoatStore.Core.DTOs;
 using LogWindowUI.ViewModels;
 
@@ -150,6 +151,16 @@ namespace LogWindowUI.Tests
             var vm = new AnalyticsViewModel(_reportApi);
 
             Assert.Contains("Помилка 403", vm.ErrorMessage);
+        }
+
+        [Fact]
+        public void Constructor_WhenServerUnreachable_ShowsConnectionMessage()
+        {
+            _reportApi.Exception = new HttpRequestException("No connection could be made");
+
+            var vm = new AnalyticsViewModel(_reportApi);
+
+            Assert.Equal("Не вдалося зв'язатися із сервером. Перевірте, чи запущено API.", vm.ErrorMessage);
         }
 
         [Fact]

@@ -134,5 +134,31 @@ namespace LogWindowUI.Tests
 
             await Assert.ThrowsAsync<HttpRequestException>(() => new ReportApiClient(handler.CreateClient()).GetSummaryAsync());
         }
+
+        private static async Task<string> ErrorMessageFor(FakeHttpHandler handler)
+        {
+            var error = await Assert.ThrowsAsync<HttpRequestException>(
+                () => new ReportApiClient(handler.CreateClient()).GetSummaryAsync());
+            return error.Message;
+        }
+
+        [Fact]
+        public async Task GetSummaryAsync_Forbidden_ExplainsInUkrainian()
+        {
+            var handler = new FakeHttpHandler(() => new HttpResponseMessage(HttpStatusCode.Forbidden));
+
+            Assert.Equal("Звіт доступний лише власнику магазину.", await ErrorMessageFor(handler));
+        }
+
+        [Fact]
+        public async Task GetSummaryAsync_ServerErrorWithMessage_UsesServerMessage()
+        {
+            var handler = new FakeHttpHandler(() => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+            {
+                Content = JsonContent.Create(new { isSuccess = false, message = "База даних тимчасово недоступна." })
+            });
+
+            Assert.Equal("База даних тимчасово недоступна.", await ErrorMessageFor(handler));
+        }
     }
 }

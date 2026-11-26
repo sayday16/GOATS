@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Net.Http;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -138,6 +139,10 @@ namespace LogWindowUI.ViewModels
                 StaleProducts = new ObservableCollection<StaleProductDto>(summary.StaleProducts);
                 RecentOperations = new ObservableCollection<RecentOperationDto>(
                     summary.RecentOperations.Select(ToLocalTime));
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode is null)
+            {
+                ErrorMessage = "Не вдалося зв'язатися із сервером. Перевірте, чи запущено API.";
             }
             catch (Exception ex)
             {
