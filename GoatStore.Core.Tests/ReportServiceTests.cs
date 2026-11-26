@@ -116,6 +116,41 @@ namespace GoatStore.Core.Tests
             Assert.Equal(375m, summary.MonthAverageReceipt);
         }
 
+        private async Task<ReportSummaryDto> SummaryWithOneFullyReturnedSaleAsync()
+        {
+            var returned = await SellAsync(Now);
+            await SellAsync(Now, products: 2);
+            await ReturnFirstItemAsync(returned);
+            return await SummaryAsync();
+        }
+
+        [Fact]
+        public async Task GetSummaryAsync_FullyReturnedSale_ExcludedFromReceiptsCount()
+        {
+            var summary = await SummaryWithOneFullyReturnedSaleAsync();
+
+            Assert.Equal(1, summary.MonthReceiptsCount);
+        }
+
+        [Fact]
+        public async Task GetSummaryAsync_FullyReturnedSale_ExcludedFromAverageReceipt()
+        {
+            var summary = await SummaryWithOneFullyReturnedSaleAsync();
+
+            Assert.Equal(500m, summary.MonthAverageReceipt);
+        }
+
+        [Fact]
+        public async Task GetSummaryAsync_PartiallyReturnedSale_StaysInReceiptsCount()
+        {
+            var sale = await SellAsync(Now, products: 2);
+            await ReturnFirstItemAsync(sale);
+
+            var summary = await SummaryAsync();
+
+            Assert.Equal(1, summary.MonthReceiptsCount);
+        }
+
         [Fact]
         public async Task GetSummaryAsync_SaleWithDiscount_ReturnsRevenueAfterDiscount()
         {
