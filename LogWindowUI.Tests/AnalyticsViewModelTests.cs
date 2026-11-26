@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using GoatStore.Core.DTOs;
 using LogWindowUI.ViewModels;
 
@@ -125,6 +126,20 @@ namespace LogWindowUI.Tests
             var vm = new AnalyticsViewModel(_reportApi);
 
             Assert.Single(vm.RecentOperations);
+        }
+
+        [Fact]
+        public void Constructor_RecentOperationInUtc_ShowsLocalTime()
+        {
+            var createdAtUtc = new DateTime(2026, 11, 26, 7, 15, 0, DateTimeKind.Utc);
+            _reportApi.Summary = new ReportSummaryDto
+            {
+                RecentOperations = [new RecentOperationDto { Number = 4, CreatedAt = createdAtUtc }]
+            };
+
+            var vm = new AnalyticsViewModel(_reportApi);
+
+            Assert.Equal(createdAtUtc.ToLocalTime(), vm.RecentOperations.Single().CreatedAt);
         }
 
         [Fact]

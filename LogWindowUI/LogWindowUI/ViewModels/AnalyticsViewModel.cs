@@ -136,7 +136,8 @@ namespace LogWindowUI.ViewModels
                 IsLimitWarning = summary.IsLimitWarning;
                 TopBrands = new ObservableCollection<BrandSalesDto>(summary.TopBrands);
                 StaleProducts = new ObservableCollection<StaleProductDto>(summary.StaleProducts);
-                RecentOperations = new ObservableCollection<RecentOperationDto>(summary.RecentOperations);
+                RecentOperations = new ObservableCollection<RecentOperationDto>(
+                    summary.RecentOperations.Select(ToLocalTime));
             }
             catch (Exception ex)
             {
@@ -147,6 +148,15 @@ namespace LogWindowUI.ViewModels
                 IsLoading = false;
             }
         }
+
+        private static RecentOperationDto ToLocalTime(RecentOperationDto operation) => new()
+        {
+            Number = operation.Number,
+            CreatedAt = operation.CreatedAt.ToLocalTime(),
+            Total = operation.Total,
+            PaymentMethod = operation.PaymentMethod,
+            HasReturns = operation.HasReturns
+        };
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
