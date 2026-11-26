@@ -11,8 +11,34 @@ namespace LogWindowUI.Tests
     {
         private readonly FakeProductApiClient _api = new();
         private readonly FakeSaleApiClient _saleApi = new();
+        private readonly FakeDialogService _dialog = new();
 
-        private InventoryViewModel CreateViewModel() => new(_api, _saleApi);
+        private InventoryViewModel CreateViewModel() => new(_api, _saleApi, _dialog);
+
+        private void SellInStockProduct(string title = "Nike Air")
+        {
+            var vm = CreateViewModel();
+            var product = new ProductDto { Id = Guid.NewGuid(), Title = title, Status = ProductStatus.InStock };
+            vm.SellCommand.Execute(product);
+        }
+
+        [Fact]
+        public void SellCommand_WhenUserDeclines_DoesNotCreateSale()
+        {
+            _dialog.ConfirmResult = false;
+
+            SellInStockProduct();
+
+            Assert.Null(_saleApi.LastCreateRequest);
+        }
+
+        [Fact]
+        public void SellCommand_Execute_AsksConfirmationWithProductTitle()
+        {
+            SellInStockProduct("Куртка Windbreaker");
+
+            Assert.Contains("Куртка Windbreaker", _dialog.LastConfirmMessage);
+        }
 
         [Fact]
         public void Constructor_LoadsProductsFromClient()

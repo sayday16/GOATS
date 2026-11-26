@@ -14,6 +14,7 @@ namespace LogWindowUI.ViewModels
     {
         private readonly IProductApiClient _productApiClient;
         private readonly ISaleApiClient _saleApiClient;
+        private readonly IDialogService _dialogService;
 
         private ObservableCollection<ProductDto> _products = new();
         private string? _searchText;
@@ -66,10 +67,14 @@ namespace LogWindowUI.ViewModels
         public ICommand RefreshCommand { get; }
         public ICommand SellCommand { get; }
 
-        public InventoryViewModel(IProductApiClient productApiClient, ISaleApiClient? saleApiClient = null)
+        public InventoryViewModel(
+            IProductApiClient productApiClient,
+            ISaleApiClient? saleApiClient = null,
+            IDialogService? dialogService = null)
         {
             _productApiClient = productApiClient;
             _saleApiClient = saleApiClient ?? App.CreateSaleApiClient();
+            _dialogService = dialogService ?? new WpfDialogService();
 
             SearchCommand = new RelayCommand(_ => LoadProductsAsync());
             ResetCommand = new RelayCommand(_ => ResetFilter());
@@ -152,6 +157,12 @@ namespace LogWindowUI.ViewModels
 
         private async System.Threading.Tasks.Task SellProductAsync(ProductDto product)
         {
+            var confirmed = _dialogService.Confirm(
+                "Продаж",
+                $"Продати 1 шт. «{product.Title}» за {product.SalePrice:N2} ₴?\nОплата: картка.");
+            if (!confirmed)
+                return;
+
             IsLoading = true;
             ErrorMessage = null;
             try
