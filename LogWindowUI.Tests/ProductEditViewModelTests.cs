@@ -165,5 +165,105 @@ namespace LogWindowUI.Tests
 
             Assert.False(closedWith);
         }
+
+        [Fact]
+        public void InitialState_DefaultIsUniqueIsTrue()
+        {
+            var vm = new ProductEditViewModel(_api);
+
+            Assert.True(vm.IsUnique);
+        }
+
+        [Fact]
+        public void InitialState_DefaultQuantityIsOne()
+        {
+            var vm = new ProductEditViewModel(_api);
+
+            Assert.Equal("1", vm.Quantity);
+        }
+
+        [Fact]
+        public void SaveCommand_CanExecute_FalseWhenNotUniqueAndQuantityZero()
+        {
+            var vm = CreateValidViewModel();
+            vm.IsUnique = false;
+            vm.Quantity = "0";
+
+            Assert.False(vm.SaveCommand.CanExecute(null));
+        }
+
+        [Fact]
+        public void SaveCommand_CanExecute_FalseWhenNotUniqueAndQuantityNegative()
+        {
+            var vm = CreateValidViewModel();
+            vm.IsUnique = false;
+            vm.Quantity = "-5";
+
+            Assert.False(vm.SaveCommand.CanExecute(null));
+        }
+
+        [Fact]
+        public void SaveCommand_CanExecute_FalseWhenNotUniqueAndQuantityNotNumber()
+        {
+            var vm = CreateValidViewModel();
+            vm.IsUnique = false;
+            vm.Quantity = "abc";
+
+            Assert.False(vm.SaveCommand.CanExecute(null));
+        }
+
+        [Fact]
+        public void SaveCommand_CanExecute_TrueWhenNotUniqueAndQuantityValid()
+        {
+            var vm = CreateValidViewModel();
+            vm.IsUnique = false;
+            vm.Quantity = "10";
+
+            Assert.True(vm.SaveCommand.CanExecute(null));
+        }
+
+        [Fact]
+        public void SaveCommand_Execute_SendsUniqueForUniqueProduct()
+        {
+            var vm = CreateValidViewModel();
+
+            vm.SaveCommand.Execute(null);
+
+            Assert.True(_api.LastCreateRequest?.IsUnique);
+        }
+
+        [Fact]
+        public void SaveCommand_Execute_SendsQuantityOneForUniqueProduct()
+        {
+            var vm = CreateValidViewModel();
+
+            vm.SaveCommand.Execute(null);
+
+            Assert.Equal(1, _api.LastCreateRequest?.Quantity);
+        }
+
+        [Fact]
+        public void SaveCommand_Execute_SendsNotUniqueForNonUniqueProduct()
+        {
+            var vm = CreateValidViewModel();
+            vm.IsUnique = false;
+            vm.Quantity = "10";
+
+            vm.SaveCommand.Execute(null);
+
+            Assert.False(_api.LastCreateRequest?.IsUnique);
+        }
+
+        [Fact]
+        public void SaveCommand_Execute_SendsEnteredQuantityForNonUniqueProduct()
+        {
+            var vm = CreateValidViewModel();
+            vm.IsUnique = false;
+            vm.Quantity = "10";
+
+            vm.SaveCommand.Execute(null);
+
+            Assert.Equal(10, _api.LastCreateRequest?.Quantity);
+        }
     }
 }

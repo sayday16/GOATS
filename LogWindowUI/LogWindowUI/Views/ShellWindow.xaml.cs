@@ -9,7 +9,19 @@ namespace LogWindowUI.Views
         public ShellWindow(AuthResponseDto? authResponse = null)
         {
             InitializeComponent();
-            DataContext = new ShellViewModel(authResponse);
+            var viewModel = new ShellViewModel(authResponse);
+            viewModel.RequestClose += ReturnToLogin;
+            DataContext = viewModel;
+        }
+
+        private void ReturnToLogin()
+        {
+            var loginView = new LoginView
+            {
+                DataContext = new LoginViewModel(App.CreateAuthService())
+            };
+            loginView.Show();
+            Close();
         }
     }
 }

@@ -54,6 +54,7 @@ namespace GoatStore.Core.Services
             var monthSales = yearSales.Where(s => s.CreatedAt >= monthStart).ToList();
 
             var monthRevenue = monthSales.Sum(SaleMath.Revenue);
+            var monthKeptReceipts = monthSales.Count(s => s.Items.Any(i => i.Quantity > i.ReturnedQuantity));
             var yearTurnover = yearSales.Sum(SaleMath.Revenue);
             var limit = await _context.Stores
                 .Where(s => s.Id == storeId)
@@ -65,8 +66,8 @@ namespace GoatStore.Core.Services
             {
                 MonthRevenue = monthRevenue,
                 MonthNetProfit = monthRevenue - monthSales.Sum(SaleMath.Cost),
-                MonthReceiptsCount = monthSales.Count,
-                MonthAverageReceipt = monthSales.Count == 0 ? 0 : Math.Round(monthRevenue / monthSales.Count, 2),
+                MonthReceiptsCount = monthKeptReceipts,
+                MonthAverageReceipt = monthKeptReceipts == 0 ? 0 : Math.Round(monthRevenue / monthKeptReceipts, 2),
                 YearTurnover = yearTurnover,
                 AnnualTurnoverLimit = limit,
                 LimitUsedPercent = limitPercent,

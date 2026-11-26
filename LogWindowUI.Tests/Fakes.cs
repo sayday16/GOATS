@@ -92,6 +92,15 @@ namespace LogWindowUI.Tests
         public void ShowWarning(string title, string message) => LastMessage = message;
 
         public void ShowError(string title, string message) => LastMessage = message;
+
+        public bool ConfirmResult { get; set; } = true;
+        public string? LastConfirmMessage { get; private set; }
+
+        public bool Confirm(string title, string message)
+        {
+            LastConfirmMessage = message;
+            return ConfirmResult;
+        }
     }
 
     public sealed class FakeProductApiClient : IProductApiClient

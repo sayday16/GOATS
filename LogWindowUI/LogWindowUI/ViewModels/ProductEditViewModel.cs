@@ -23,6 +23,8 @@ namespace LogWindowUI.ViewModels
         private string? _sku;
         private string _purchasePrice = string.Empty;
         private string _salePrice = string.Empty;
+        private bool _isUnique = true;
+        private string _quantity = "1";
         private string? _errorMessage;
         private bool _isLoading;
 
@@ -72,6 +74,26 @@ namespace LogWindowUI.ViewModels
         {
             get => _salePrice;
             set { _salePrice = value; OnPropertyChanged(); InvalidateCommands(); }
+        }
+
+        public bool IsUnique
+        {
+            get => _isUnique;
+            set
+            {
+                _isUnique = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsNotUnique));
+                InvalidateCommands();
+            }
+        }
+
+        public bool IsNotUnique => !_isUnique;
+
+        public string Quantity
+        {
+            get => _quantity;
+            set { _quantity = value; OnPropertyChanged(); InvalidateCommands(); }
         }
 
         public string? ErrorMessage
@@ -128,6 +150,7 @@ namespace LogWindowUI.ViewModels
             if (string.IsNullOrWhiteSpace(SelectedCategory)) return false;
             if (!TryParsePrice(PurchasePrice, out _)) return false;
             if (!TryParsePrice(SalePrice, out _)) return false;
+            if (!IsUnique && (!int.TryParse(Quantity, out int q) || q <= 0)) return false;
             return true;
         }
 
@@ -142,6 +165,7 @@ namespace LogWindowUI.ViewModels
             {
                 TryParsePrice(PurchasePrice, out decimal purchase);
                 TryParsePrice(SalePrice, out decimal sale);
+                int quantity = IsUnique ? 1 : (int.TryParse(Quantity, out int q) ? q : 1);
 
                 var request = new SaveProductRequestDto
                 {
@@ -152,7 +176,9 @@ namespace LogWindowUI.ViewModels
                     Condition = SelectedCondition == "Вживаний" ? ProductCondition.Used : ProductCondition.New,
                     Sku = string.IsNullOrWhiteSpace(Sku) ? null : Sku.Trim(),
                     PurchasePrice = purchase,
-                    SalePrice = sale
+                    SalePrice = sale,
+                    IsUnique = IsUnique,
+                    Quantity = quantity
                 };
 
                 var result = await _productApiClient.CreateAsync(request);

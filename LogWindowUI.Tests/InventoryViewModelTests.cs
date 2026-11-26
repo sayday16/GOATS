@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using GoatStore.Core.DTOs;
 using GoatStore.DataAccess.Entities;
 using LogWindowUI.ViewModels;
@@ -9,6 +10,35 @@ namespace LogWindowUI.Tests
     public class InventoryViewModelTests
     {
         private readonly FakeProductApiClient _api = new();
+        private readonly FakeSaleApiClient _saleApi = new();
+        private readonly FakeDialogService _dialog = new();
+
+        private InventoryViewModel CreateViewModel() => new(_api, _saleApi, _dialog);
+
+        private void SellInStockProduct(string title = "Nike Air")
+        {
+            var vm = CreateViewModel();
+            var product = new ProductDto { Id = Guid.NewGuid(), Title = title, Status = ProductStatus.InStock };
+            vm.SellCommand.Execute(product);
+        }
+
+        [Fact]
+        public void SellCommand_WhenUserDeclines_DoesNotCreateSale()
+        {
+            _dialog.ConfirmResult = false;
+
+            SellInStockProduct();
+
+            Assert.Null(_saleApi.LastCreateRequest);
+        }
+
+        [Fact]
+        public void SellCommand_Execute_AsksConfirmationWithProductTitle()
+        {
+            SellInStockProduct("Куртка Windbreaker");
+
+            Assert.Contains("Куртка Windbreaker", _dialog.LastConfirmMessage);
+        }
 
         [Fact]
         public void Constructor_LoadsProductsFromClient()
@@ -16,7 +46,7 @@ namespace LogWindowUI.Tests
             var product = new ProductDto { Id = Guid.NewGuid(), Title = "Nike Air" };
             _api.Products.Add(product);
 
-            var vm = new InventoryViewModel(_api);
+            var vm = CreateViewModel();
 
             Assert.Single(vm.Products);
         }
@@ -29,7 +59,7 @@ namespace LogWindowUI.Tests
                 Categories = new List<string> { "Одяг" }
             };
 
-            var vm = new InventoryViewModel(_api);
+            var vm = CreateViewModel();
 
             Assert.Contains("(Всі)", vm.Categories);
         }
@@ -37,7 +67,7 @@ namespace LogWindowUI.Tests
         [Fact]
         public void Constructor_SetsDefaultSelectedCategoryToAll()
         {
-            var vm = new InventoryViewModel(_api);
+            var vm = CreateViewModel();
 
             Assert.Equal("(Всі)", vm.SelectedCategory);
         }
@@ -45,7 +75,8 @@ namespace LogWindowUI.Tests
         [Fact]
         public void SearchCommand_PassesSearchTextToClient()
         {
-            var vm = new InventoryViewModel(_api) { SearchText = "Nike" };
+            var vm = CreateViewModel();
+            vm.SearchText = "Nike";
 
             vm.SearchCommand.Execute(null);
 
@@ -55,10 +86,8 @@ namespace LogWindowUI.Tests
         [Fact]
         public void SearchCommand_WhenCategoryIsAll_PassesNullCategory()
         {
-            var vm = new InventoryViewModel(_api)
-            {
-                SelectedCategory = "(Всі)"
-            };
+            var vm = CreateViewModel();
+            vm.SelectedCategory = "(Всі)";
 
             vm.SearchCommand.Execute(null);
 
@@ -68,10 +97,8 @@ namespace LogWindowUI.Tests
         [Fact]
         public void SearchCommand_WhenSpecificCategorySelected_PassesCategory()
         {
-            var vm = new InventoryViewModel(_api)
-            {
-                SelectedCategory = "Одяг"
-            };
+            var vm = CreateViewModel();
+            vm.SelectedCategory = "Одяг";
 
             vm.SearchCommand.Execute(null);
 
@@ -81,7 +108,8 @@ namespace LogWindowUI.Tests
         [Fact]
         public void ResetCommand_ClearsSearchText()
         {
-            var vm = new InventoryViewModel(_api) { SearchText = "Nike" };
+            var vm = CreateViewModel();
+            vm.SearchText = "Nike";
 
             vm.ResetCommand.Execute(null);
 
@@ -91,7 +119,8 @@ namespace LogWindowUI.Tests
         [Fact]
         public void ResetCommand_ResetsSelectedCategoryToAll()
         {
-            var vm = new InventoryViewModel(_api) { SelectedCategory = "Одяг" };
+            var vm = CreateViewModel();
+            vm.SelectedCategory = "Одяг";
 
             vm.ResetCommand.Execute(null);
 
@@ -101,7 +130,7 @@ namespace LogWindowUI.Tests
         [Fact]
         public void SellCommand_CanExecute_TrueForInStockProduct()
         {
-            var vm = new InventoryViewModel(_api);
+            var vm = CreateViewModel();
             var product = new ProductDto { Status = ProductStatus.InStock };
 
             Assert.True(vm.SellCommand.CanExecute(product));
@@ -110,7 +139,7 @@ namespace LogWindowUI.Tests
         [Fact]
         public void SellCommand_CanExecute_FalseForSoldProduct()
         {
-            var vm = new InventoryViewModel(_api);
+            var vm = CreateViewModel();
             var product = new ProductDto { Status = ProductStatus.Sold };
 
             Assert.False(vm.SellCommand.CanExecute(product));
@@ -119,21 +148,44 @@ namespace LogWindowUI.Tests
         [Fact]
         public void SellCommand_CanExecute_FalseForNull()
         {
-            var vm = new InventoryViewModel(_api);
+            var vm = CreateViewModel();
 
             Assert.False(vm.SellCommand.CanExecute(null));
         }
 
         [Fact]
-        public void SellCommand_Execute_CallsSellAsyncWithProductId()
+        public void SellCommand_Execute_CallsSaleApiClientWithProductId()
         {
-            var vm = new InventoryViewModel(_api);
+            var vm = CreateViewModel();
             var id = Guid.NewGuid();
             var product = new ProductDto { Id = id, Status = ProductStatus.InStock };
 
             vm.SellCommand.Execute(product);
 
-            Assert.Equal(id, _api.LastSellId);
+            Assert.Equal(id, _saleApi.LastCreateRequest?.Items.Single().ProductId);
+        }
+
+        [Fact]
+        public void SellCommand_Execute_SendsSingleQuantity()
+        {
+            var vm = CreateViewModel();
+            var product = new ProductDto { Id = Guid.NewGuid(), Status = ProductStatus.InStock };
+
+            vm.SellCommand.Execute(product);
+
+            Assert.Equal(1, _saleApi.LastCreateRequest?.Items.Single().Quantity);
+        }
+
+        [Fact]
+        public void SellCommand_Execute_WhenSaleFails_SetsErrorMessage()
+        {
+            _saleApi.CreateResponse = new SaleResponseDto { IsSuccess = false, Message = "Товар вже продано." };
+            var vm = CreateViewModel();
+            var product = new ProductDto { Id = Guid.NewGuid(), Status = ProductStatus.InStock };
+
+            vm.SellCommand.Execute(product);
+
+            Assert.Equal("Товар вже продано.", vm.ErrorMessage);
         }
     }
 }

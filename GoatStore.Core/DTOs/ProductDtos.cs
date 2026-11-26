@@ -41,6 +41,7 @@ namespace GoatStore.Core.DTOs
         public int Quantity { get; set; }
         public int ReservedQuantity { get; set; }
         public int LowStockThreshold { get; set; }
+        public bool IsLowStock => !IsUnique && Status == ProductStatus.InStock && Quantity <= LowStockThreshold;
         public DateTime CreatedAt { get; set; }
         public DateTime? SoldDate { get; set; }
     }
@@ -54,9 +55,9 @@ namespace GoatStore.Core.DTOs
     public enum ProductError
     {
         None = 0,
-        Validation,  // 400
-        NotFound,    // 404
-        Conflict     // 409
+        Validation,
+        NotFound,
+        Conflict
     }
 
     public class ProductResponseDto
