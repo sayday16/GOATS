@@ -1,7 +1,6 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Windows;
 using System.Windows.Input;
 using GoatStore.Core.DTOs;
 using GoatStore.DataAccess.Entities;
@@ -152,22 +151,6 @@ namespace LogWindowUI.ViewModels
         {
             AuthSession.Clear();
             RequestClose?.Invoke();
-            if (Application.Current != null)
-            {
-                var loginView = new Views.LoginView
-                {
-                    DataContext = new LoginViewModel(App.CreateAuthService())
-                };
-                loginView.Show();
-                foreach (Window window in Application.Current.Windows)
-                {
-                    if (window.DataContext == this)
-                    {
-                        window.Close();
-                        break;
-                    }
-                }
-            }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

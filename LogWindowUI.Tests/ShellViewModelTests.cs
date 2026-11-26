@@ -305,5 +305,17 @@ namespace LogWindowUI.Tests
 
             Assert.False(AuthSession.IsActive);
         }
+
+        [Fact]
+        public void LogoutCommand_RaisesRequestClose()
+        {
+            var vm = CreateViewModel();
+            var closeRequested = false;
+            vm.RequestClose += () => closeRequested = true;
+
+            vm.LogoutCommand.Execute(null);
+
+            Assert.True(closeRequested);
+        }
     }
 }
